@@ -1,0 +1,14 @@
+node_modules/
+AGENTS.md
+config.json
+memory/
+MEMORY.md
+USER.md
+SOUL.md
+IDENTITY.md
+TOOLS.md
+HEARTBEAT.md
+openclaw-workspace-state.json
+*.log
+*.tmp
+.DS_Store

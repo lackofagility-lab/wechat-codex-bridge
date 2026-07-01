@@ -1,0 +1,4 @@
+interface:
+  display_name: "WeChat Codex Bridge"
+  short_description: "Install and maintain a secure Windows WeChat-to-Codex bridge"
+  default_prompt: "Use $wechat-codex-bridge to securely install or troubleshoot the bridge on this Windows PC."

@@ -1,0 +1,12 @@
+{
+  "workspace": ".",
+  "model": null,
+  "modelProvider": null,
+  "sandbox": "workspace-write",
+  "thinking": "medium",
+  "progressUpdates": true,
+  "pollTimeoutMs": 40000,
+  "codexTimeoutMs": 180000,
+  "memoryRecentTurns": 30,
+  "allowedUserIds": []
+}

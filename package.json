@@ -1,0 +1,20 @@
+{
+  "name": "wechat-codex-bridge",
+  "version": "1.0.0",
+  "description": "Secure Windows bridge between WeChat ClawBot and local Codex",
+  "private": true,
+  "license": "MIT",
+  "keywords": ["wechat", "codex", "clawbot", "windows", "agent"],
+  "type": "module",
+  "scripts": {
+    "start": "node src/service.js",
+    "check": "node --check src/service.js && node --check src/wechat-client.js && node --check src/codex-client.js && node --check src/store.js && node --check src/memory-store.js && node --check src/access-store.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@openai/codex": "0.139.0"
+  }
+}
