@@ -1,5 +1,7 @@
 # WeChat Codex Bridge
 
+[简体中文](README.zh-CN.md)
+
 Run Codex from WeChat on a Windows PC without routing conversations through an OpenClaw agent.
 
 在 Windows 电脑上通过微信直接使用本机 Codex。OpenClaw/Tencent 插件只用于首次微信扫码授权，不参与后续 Agent、模型或会话处理。
@@ -10,6 +12,7 @@ Run Codex from WeChat on a Windows PC without routing conversations through an O
 - One-time pairing code and persistent user allowlist
 - Durable recent memory and daily conversation notes
 - Optional Windows Computer Use for controlling desktop applications from WeChat
+- Exact per-app Computer Use approval; no wildcard desktop permission
 - Exactly-once message IDs to prevent duplicate acknowledgements and replies
 - Auto-start, crash recovery, long-poll reconnect, and single-instance lock
 - Screen lock and display-off supported; Windows sleep/hibernate still pauses replies
@@ -51,6 +54,15 @@ Security defaults:
 - Codex is restricted to `workspace-write`.
 - Read-only desktop inspection may run immediately; actions with external side effects require confirmation in WeChat.
 - Low-risk Computer Use app access is approved by the bridge for the active paired-user turn; high-risk MCP approvals are declined until explicitly confirmed.
+- `danger-full-access` is an explicit local opt-in and is never the public default.
+
+## Limitations
+
+- Windows is the only supported service platform today.
+- Phone and Codex desktop conversations are separate; phone cannot list or switch desktop threads yet.
+- Computer Use requires an unlocked Windows session, Codex desktop runtime, and an alias for the named app.
+- Replies are text-only; Computer Use screenshots are not sent back to WeChat yet.
+- The first QR login uses Tencent's official OpenClaw WeChat installer, though runtime conversations do not use an OpenClaw agent.
 - Credentials, local config, personal memory, and logs are excluded from Git.
 
 ## Maintenance
