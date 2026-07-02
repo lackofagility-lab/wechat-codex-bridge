@@ -7,6 +7,8 @@ description: Install, configure, diagnose, update, or uninstall the open-source 
 
 Operate the Windows bridge that connects Tencent WeChat ClawBot directly to the local Codex app-server.
 
+When desktop control is enabled, route Windows UI requests through the installed `computer-use` skill. Preserve its confirmation policy; never replace it with ad-hoc SendKeys or shell-based UI automation.
+
 ## Install
 
 1. Require Windows 10/11, Node.js 22+, Git, and a working `codex` login.

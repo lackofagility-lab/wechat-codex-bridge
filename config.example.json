@@ -8,5 +8,6 @@
   "pollTimeoutMs": 40000,
   "codexTimeoutMs": 180000,
   "memoryRecentTurns": 30,
-  "allowedUserIds": []
+  "allowedUserIds": [],
+  "computerUseEnabled": true
 }

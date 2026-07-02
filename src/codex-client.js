@@ -153,6 +153,7 @@ export class CodexClient {
         approvalPolicy: "never",
         sandbox: this.sandbox,
       };
+      if (this.model) params.model = this.model;
       if (this.modelProvider) params.modelProvider = this.modelProvider;
       await this.request("thread/resume", params);
       this.loadedThreads.add(threadId);

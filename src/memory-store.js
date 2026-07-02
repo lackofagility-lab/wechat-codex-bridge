@@ -13,10 +13,11 @@ function clean(text, max = 12000) {
 }
 
 export class MemoryStore {
-  constructor({ filePath, workspace, maxTurns = 30 }) {
+  constructor({ filePath, workspace, maxTurns = 30, computerUseEnabled = true }) {
     this.filePath = filePath;
     this.workspace = workspace;
     this.maxTurns = maxTurns;
+    this.computerUseEnabled = computerUseEnabled;
     this.data = readJson(filePath, { users: {} });
     this.data.users ??= {};
   }
@@ -41,6 +42,7 @@ export class MemoryStore {
       "你正在通过微信与用户进行连续对话。以下是独立保存的近期记忆，用来防止重启、换线程或上下文压缩造成失忆。",
       "", "<wechat_recent_memory>", history, "</wechat_recent_memory>", "",
       "回答前结合上述记忆。若本轮出现值得长期记住的稳定信息（用户偏好、身份关系、长期项目、重要决定），请按 AGENTS.md 的规则更新 MEMORY.md 或当天 memory/YYYY-MM-DD.md。不要在回复中描述记忆操作，也不要保存密码、令牌等秘密。",
+      ...(this.computerUseEnabled ? ["如果用户要求查看或操作 Windows 桌面、应用、鼠标或键盘，请使用已安装的 computer-use 技能。必须遵循该技能的安全确认规则：只读查看可直接执行；发送消息、删除内容、安装软件、提交表单、付款或其他外部副作用必须先在微信中请求明确确认。不要使用临时的 PowerShell/SendKeys 替代 Computer Use。"] : []),
       "", "用户本轮消息：", userText,
     ].join("\n");
   }

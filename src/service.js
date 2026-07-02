@@ -41,6 +41,7 @@ function loadConfig() {
     codexTimeoutMs: 180000,
     memoryRecentTurns: 30,
     allowedUserIds: [],
+    computerUseEnabled: true,
   });
 }
 
@@ -111,6 +112,7 @@ const memory = new MemoryStore({
   filePath: memoryPath,
   workspace: config.workspace,
   maxTurns: config.memoryRecentTurns ?? 30,
+  computerUseEnabled: config.computerUseEnabled !== false,
 });
 let syncBuffer = readJson(syncPath, { get_updates_buf: "" }).get_updates_buf ?? "";
 let stopping = false;

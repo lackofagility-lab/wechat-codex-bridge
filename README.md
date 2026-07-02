@@ -9,6 +9,7 @@ Run Codex from WeChat on a Windows PC without routing conversations through an O
 - Direct WeChat ClawBot ↔ local Codex app-server connection
 - One-time pairing code and persistent user allowlist
 - Durable recent memory and daily conversation notes
+- Optional Windows Computer Use for controlling desktop applications from WeChat
 - Exactly-once message IDs to prevent duplicate acknowledgements and replies
 - Auto-start, crash recovery, long-poll reconnect, and single-instance lock
 - Screen lock and display-off supported; Windows sleep/hibernate still pauses replies
@@ -18,6 +19,7 @@ Run Codex from WeChat on a Windows PC without routing conversations through an O
 - Windows 10 or 11
 - Node.js 22 or newer
 - Codex CLI, signed in with ChatGPT or an API key
+- Codex desktop app with the Computer Use plugin for desktop control
 - WeChat with ClawBot access
 
 ## Install
@@ -47,6 +49,7 @@ Security defaults:
 
 - Unknown WeChat users are ignored.
 - Codex is restricted to `workspace-write`.
+- Read-only desktop inspection may run immediately; actions with external side effects require confirmation in WeChat.
 - Credentials, local config, personal memory, and logs are excluded from Git.
 
 ## Maintenance

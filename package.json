@@ -4,7 +4,13 @@
   "description": "Secure Windows bridge between WeChat ClawBot and local Codex",
   "private": true,
   "license": "MIT",
-  "keywords": ["wechat", "codex", "clawbot", "windows", "agent"],
+  "keywords": [
+    "wechat",
+    "codex",
+    "clawbot",
+    "windows",
+    "agent"
+  ],
   "type": "module",
   "scripts": {
     "start": "node src/service.js",
@@ -15,6 +21,6 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@openai/codex": "0.139.0"
+    "@openai/codex": "^0.142.5"
   }
 }
