@@ -50,6 +50,7 @@ Security defaults:
 - Unknown WeChat users are ignored.
 - Codex is restricted to `workspace-write`.
 - Read-only desktop inspection may run immediately; actions with external side effects require confirmation in WeChat.
+- Low-risk Computer Use app access is approved by the bridge for the active paired-user turn; high-risk MCP approvals are declined until explicitly confirmed.
 - Credentials, local config, personal memory, and logs are excluded from Git.
 
 ## Maintenance

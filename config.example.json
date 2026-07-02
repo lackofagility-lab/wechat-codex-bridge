@@ -9,5 +9,6 @@
   "codexTimeoutMs": 180000,
   "memoryRecentTurns": 30,
   "allowedUserIds": [],
-  "computerUseEnabled": true
+  "computerUseEnabled": true,
+  "autoApproveLowRiskComputerUse": true
 }

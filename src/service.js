@@ -42,6 +42,7 @@ function loadConfig() {
     memoryRecentTurns: 30,
     allowedUserIds: [],
     computerUseEnabled: true,
+    autoApproveLowRiskComputerUse: true,
   });
 }
 
@@ -105,6 +106,7 @@ const codex = new CodexClient({
   sandbox: config.sandbox,
   thinking: config.thinking,
   timeoutMs: config.codexTimeoutMs,
+  autoApproveLowRiskComputerUse: config.autoApproveLowRiskComputerUse !== false,
 });
 const sessions = new SessionStore(sessionsPath);
 const access = new AccessStore(accessPath, config.allowedUserIds ?? []);

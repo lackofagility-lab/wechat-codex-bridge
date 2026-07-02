@@ -7,13 +7,14 @@ const codexScript = fileURLToPath(
 );
 
 export class CodexClient {
-  constructor({ workspace, model, modelProvider = null, sandbox = "workspace-write", thinking = "medium", timeoutMs = 900000 }) {
+  constructor({ workspace, model, modelProvider = null, sandbox = "workspace-write", thinking = "medium", timeoutMs = 900000, autoApproveLowRiskComputerUse = true }) {
     this.workspace = workspace;
     this.model = model;
     this.modelProvider = modelProvider;
     this.sandbox = sandbox;
     this.thinking = thinking;
     this.timeoutMs = timeoutMs;
+    this.autoApproveLowRiskComputerUse = autoApproveLowRiskComputerUse;
     this.child = null;
     this.nextId = 1;
     this.requests = new Map();
@@ -71,6 +72,10 @@ export class CodexClient {
     } catch {
       return;
     }
+    if (message.id != null && message.method) {
+      this.handleServerRequest(message);
+      return;
+    }
     if (message.id != null && (message.result !== undefined || message.error !== undefined)) {
       const pending = this.requests.get(String(message.id));
       if (!pending) return;
@@ -101,6 +106,27 @@ export class CodexClient {
         pending.resolve(pending.messages.at(-1));
       }
     }
+  }
+
+  handleServerRequest(message) {
+    if (message.method !== "mcpServer/elicitation/request") {
+      this.send({ id: message.id, error: { code: -32601, message: `Unsupported server request: ${message.method}` } });
+      return;
+    }
+
+    const request = message.params?.request ?? message.params ?? {};
+    const meta = request.meta ?? {};
+    const isComputerUseApproval =
+      meta.codex_approval_kind === "mcp_tool_call" &&
+      meta.connector_id === "computer-use";
+    const canAccept =
+      isComputerUseApproval &&
+      this.autoApproveLowRiskComputerUse &&
+      meta.riskLevel !== "high";
+    this.send({
+      id: message.id,
+      result: { action: canAccept ? "accept" : "decline", content: canAccept ? {} : null },
+    });
   }
 
   send(message) {
