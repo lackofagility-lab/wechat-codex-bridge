@@ -43,6 +43,10 @@ function loadConfig() {
     allowedUserIds: [],
     computerUseEnabled: true,
     autoApproveLowRiskComputerUse: true,
+    computerUseAppAliases: {
+      "记事本": "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App",
+      "notepad": "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App",
+    },
   });
 }
 
@@ -119,6 +123,15 @@ const memory = new MemoryStore({
 let syncBuffer = readJson(syncPath, { get_updates_buf: "" }).get_updates_buf ?? "";
 let stopping = false;
 
+function approvedComputerUseApp(text) {
+  if (config.computerUseEnabled === false) return null;
+  const normalized = text.toLowerCase();
+  for (const [alias, appId] of Object.entries(config.computerUseAppAliases ?? {})) {
+    if (normalized.includes(alias.toLowerCase())) return appId;
+  }
+  return null;
+}
+
 async function handleMessage(rawMessage) {
   const message = wechat.normalize(rawMessage);
   if (!message.isUser || !message.isFinished || !message.from || !message.text) return;
@@ -165,6 +178,7 @@ async function handleMessage(rawMessage) {
       }
       let result;
       let lastError;
+      codex.setApprovedComputerUseApp(approvedComputerUseApp(message.text));
       for (let attempt = 1; attempt <= 3; attempt += 1) {
         try {
           const prompt = memory.buildPrompt(message.from, message.text);

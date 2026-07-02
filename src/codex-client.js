@@ -6,6 +6,16 @@ const codexScript = fileURLToPath(
   new URL("../node_modules/@openai/codex/bin/codex.js", import.meta.url),
 );
 
+const approvalPolicy = {
+  granular: {
+    mcp_elicitations: true,
+    rules: false,
+    sandbox_approval: false,
+    request_permissions: false,
+    skill_approval: false,
+  },
+};
+
 export class CodexClient {
   constructor({ workspace, model, modelProvider = null, sandbox = "workspace-write", thinking = "medium", timeoutMs = 900000, autoApproveLowRiskComputerUse = true }) {
     this.workspace = workspace;
@@ -15,6 +25,7 @@ export class CodexClient {
     this.thinking = thinking;
     this.timeoutMs = timeoutMs;
     this.autoApproveLowRiskComputerUse = autoApproveLowRiskComputerUse;
+    this.approvedComputerUseApp = null;
     this.child = null;
     this.nextId = 1;
     this.requests = new Map();
@@ -46,9 +57,26 @@ export class CodexClient {
         "-c", "model_providers.chatgpt-http.supports_websockets=false",
       );
     }
+    if (this.approvedComputerUseApp) {
+      const requestMeta = JSON.stringify({
+        "x-oai-cua-approved-app": this.approvedComputerUseApp,
+      });
+      args.push(
+        "-c",
+        `mcp_servers.node_repl.env.NODE_REPL_REQUEST_META=${JSON.stringify(requestMeta)}`,
+      );
+    }
     this.child = spawn(process.execPath, args, {
       cwd: this.workspace,
       windowsHide: true,
+      env: {
+        ...process.env,
+        ...(this.approvedComputerUseApp ? {
+          NODE_REPL_REQUEST_META: JSON.stringify({
+            "x-oai-cua-approved-app": this.approvedComputerUseApp,
+          }),
+        } : {}),
+      },
       stdio: ["pipe", "pipe", "pipe"],
     });
     this.child.stderr.on("data", (chunk) => process.stderr.write(`[codex] ${chunk}`));
@@ -58,7 +86,10 @@ export class CodexClient {
 
     await this.request("initialize", {
       clientInfo: { name: "wechat-codex-bridge", title: "WeChat Codex Bridge", version: "1.0.0" },
-      capabilities: { experimentalApi: true },
+      capabilities: {
+        experimentalApi: true,
+        mcpServerOpenaiFormElicitation: true,
+      },
     });
     this.notify("initialized", {});
     this.loadedThreads.clear();
@@ -171,12 +202,20 @@ export class CodexClient {
     if (child && !child.killed) child.kill();
   }
 
+  setApprovedComputerUseApp(appId) {
+    const next = appId || null;
+    if (next === this.approvedComputerUseApp) return;
+    this.approvedComputerUseApp = next;
+    if (this.child) this.restart(new Error("Computer Use app scope changed"));
+  }
+
   async ensureThread(threadId) {
     if (threadId && !this.loadedThreads.has(threadId)) {
       const params = {
         threadId,
         cwd: this.workspace,
-        approvalPolicy: "never",
+        approvalPolicy,
+        approvalsReviewer: "auto_review",
         sandbox: this.sandbox,
       };
       if (this.model) params.model = this.model;
@@ -190,8 +229,8 @@ export class CodexClient {
     const params = {
       cwd: this.workspace,
       model: this.model || undefined,
-      approvalPolicy: "never",
-      approvalsReviewer: "user",
+      approvalPolicy,
+      approvalsReviewer: "auto_review",
       sandbox: this.sandbox,
       ephemeral: false,
       threadSource: "user",
@@ -212,7 +251,7 @@ export class CodexClient {
       input: [{ type: "text", text: prompt }],
       effort: this.thinking,
       cwd: this.workspace,
-      approvalPolicy: "never",
+      approvalPolicy,
     });
     const turnId = result?.turn?.id;
     if (!turnId) throw new Error("Codex did not return a turn id");
