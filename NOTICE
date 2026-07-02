@@ -1,0 +1,9 @@
+WeChat Codex Bridge is an independent community project and is not affiliated with or endorsed by Tencent or OpenAI.
+
+The WeChat QR-login bootstrap and iLink protocol behavior are based on Tencent's MIT-licensed openclaw-weixin project:
+https://github.com/Tencent/openclaw-weixin
+
+Codex and codex app-server are provided by OpenAI:
+https://github.com/openai/codex
+
+WeChat, ClawBot, OpenAI, ChatGPT, and Codex are trademarks of their respective owners.

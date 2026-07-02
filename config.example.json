@@ -1,0 +1,26 @@
+{
+  "workspace": ".",
+  "model": null,
+  "modelProvider": null,
+  "sandbox": "workspace-write",
+  "thinking": "medium",
+  "progressUpdates": true,
+  "pollTimeoutMs": 40000,
+  "codexTimeoutMs": 180000,
+  "memoryRecentTurns": 30,
+  "allowedUserIds": [],
+  "computerUseEnabled": true,
+  "autoApproveLowRiskComputerUse": true,
+  "computerUseAppAliases": {
+    "记事本": "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App",
+    "notepad": "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App",
+    "google": "Chrome",
+    "谷歌": "Chrome",
+    "chrome": "Chrome",
+    "浏览器": "Chrome"
+    ,"word": "Microsoft.Office.WINWORD.EXE.15"
+    ,"excel": "Microsoft.Office.EXCEL.EXE.15"
+    ,"powerpoint": "Microsoft.Office.POWERPNT.EXE.15"
+    ,"计算器": "Microsoft.WindowsCalculator_8wekyb3d8bbwe!App"
+  }
+}
