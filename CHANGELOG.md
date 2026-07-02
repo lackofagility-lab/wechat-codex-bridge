@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0 - Unreleased
+## 1.0.0 - 2026-07-02
 
 - Direct WeChat ClawBot to local Codex app-server bridge
 - Windows Scheduled Task installation and crash recovery
