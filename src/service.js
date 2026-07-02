@@ -46,6 +46,10 @@ function loadConfig() {
     computerUseAppAliases: {
       "记事本": "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App",
       "notepad": "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App",
+      "google": "Chrome",
+      "谷歌": "Chrome",
+      "chrome": "Chrome",
+      "浏览器": "Chrome",
     },
   });
 }
