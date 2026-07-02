@@ -50,6 +50,15 @@ function loadConfig() {
       "谷歌": "Chrome",
       "chrome": "Chrome",
       "浏览器": "Chrome",
+      "word": "Microsoft.Office.WINWORD.EXE.15",
+      "excel": "Microsoft.Office.EXCEL.EXE.15",
+      "powerpoint": "Microsoft.Office.POWERPNT.EXE.15",
+      "ppt": "Microsoft.Office.POWERPNT.EXE.15",
+      "计算器": "Microsoft.WindowsCalculator_8wekyb3d8bbwe!App",
+      "calculator": "Microsoft.WindowsCalculator_8wekyb3d8bbwe!App",
+      "时钟": "Microsoft.WindowsAlarms_8wekyb3d8bbwe!App",
+      "clock": "Microsoft.WindowsAlarms_8wekyb3d8bbwe!App",
+      "docker": "Docker.DockerForWindows.Settings",
     },
   });
 }
