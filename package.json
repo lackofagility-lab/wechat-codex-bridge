@@ -11,6 +11,14 @@
     "windows",
     "agent"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lackofagility-lab/wechat-codex-bridge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lackofagility-lab/wechat-codex-bridge/issues"
+  },
+  "homepage": "https://github.com/lackofagility-lab/wechat-codex-bridge#readme",
   "type": "module",
   "scripts": {
     "start": "node src/service.js",

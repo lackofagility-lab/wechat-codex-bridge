@@ -24,7 +24,7 @@
 ## 安装
 
 ```powershell
-git clone https://github.com/YOUR_GITHUB_USERNAME/wechat-codex-bridge.git
+git clone https://github.com/lackofagility-lab/wechat-codex-bridge.git
 cd wechat-codex-bridge
 powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 ```

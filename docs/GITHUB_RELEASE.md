@@ -19,8 +19,7 @@ Known limitations: Windows only, text-only replies, desktop and phone threads ar
 
 ## Before publishing
 
-- Replace `YOUR_GITHUB_USERNAME` in both README files.
-- Set the package repository URL after creating the GitHub repository.
+- Confirm README and package metadata point to `lackofagility-lab/wechat-codex-bridge`.
 - Run tests, Skill validation, staged secret scanning, and `git diff --cached --check`.
 - Confirm `config.json`, memory, personal markdown files, logs, and credentials are ignored.
 - Create the public repository, push `main`, and publish the release from commit `HEAD`.
