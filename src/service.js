@@ -51,17 +51,14 @@ function loadConfig() {
     allowedUserIds: [],
     computerUseEnabled: true,
     autoApproveLowRiskComputerUse: true,
+    autoApproveHighRiskComputerUseApps: false,
     computerUseScreenshots: true,
     computerUseMaxScreenshots: 3,
     computerUseAppAliases: {
       "记事本": "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App",
       "notepad": "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App",
-      "google": "Google Chrome",
-      "谷歌": "Google Chrome",
-      "chrome": "Google Chrome",
-      "浏览器": "Google Chrome",
-      "youtube": "Google Chrome",
-      "油管": "Google Chrome",
+      "google": "Chrome", "谷歌": "Chrome", "chrome": "Chrome",
+      "浏览器": "Chrome", "youtube": "Chrome", "油管": "Chrome",
       "word": "Microsoft.Office.WINWORD.EXE.15",
       "excel": "Microsoft.Office.EXCEL.EXE.15",
       "powerpoint": "Microsoft.Office.POWERPNT.EXE.15",
@@ -137,6 +134,7 @@ const codex = new CodexClient({
   thinking: config.thinking,
   timeoutMs: config.codexTimeoutMs,
   autoApproveLowRiskComputerUse: config.autoApproveLowRiskComputerUse !== false,
+  autoApproveHighRiskComputerUseApps: config.autoApproveHighRiskComputerUseApps === true,
   computerUseMaxScreenshots: config.computerUseScreenshots === false
     ? 0
     : (config.computerUseMaxScreenshots ?? 3),
@@ -162,6 +160,10 @@ function approvedComputerUseApp(text) {
     if (normalized.includes(alias.toLowerCase())) return appId;
   }
   return null;
+}
+
+function isComputerUseRetry(text) {
+  return /^(?:再试(?:一次)?|重试|继续|retry|try again|continue)[。！!\s]*$/i.test(text.trim());
 }
 
 async function handleMessage(rawMessage) {
@@ -211,7 +213,12 @@ async function handleMessage(rawMessage) {
       }
       let result;
       let lastError;
-      const approvedApp = approvedComputerUseApp(message.text);
+      const requestedApp = approvedComputerUseApp(message.text);
+      const approvedApp = requestedApp || (
+        isComputerUseRetry(message.text) ? sessions.getApprovedComputerUseApp(message.from) : null
+      );
+      if (requestedApp) sessions.setApprovedComputerUseApp(message.from, requestedApp);
+      log(`computer use scope id=${message.id} requested=${requestedApp ?? "none"} active=${approvedApp ?? "none"}`);
       codex.setApprovedComputerUseApp(approvedApp);
       for (let attempt = 1; attempt <= 3; attempt += 1) {
         try {

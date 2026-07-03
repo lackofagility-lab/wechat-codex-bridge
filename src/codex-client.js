@@ -61,7 +61,7 @@ export function extractScreenshotSources(item, limit = 3) {
 }
 
 export class CodexClient {
-  constructor({ workspace, model, modelProvider = null, sandbox = "workspace-write", thinking = "medium", timeoutMs = 900000, autoApproveLowRiskComputerUse = true, computerUseMaxScreenshots = 3 }) {
+  constructor({ workspace, model, modelProvider = null, sandbox = "workspace-write", thinking = "medium", timeoutMs = 900000, autoApproveLowRiskComputerUse = true, autoApproveHighRiskComputerUseApps = false, computerUseMaxScreenshots = 3 }) {
     this.workspace = workspace;
     this.model = model;
     this.modelProvider = modelProvider;
@@ -69,6 +69,7 @@ export class CodexClient {
     this.thinking = thinking;
     this.timeoutMs = timeoutMs;
     this.autoApproveLowRiskComputerUse = autoApproveLowRiskComputerUse;
+    this.autoApproveHighRiskComputerUseApps = autoApproveHighRiskComputerUseApps;
     this.computerUseMaxScreenshots = Math.max(0, Math.min(10, Number(computerUseMaxScreenshots) || 0));
     this.approvedComputerUseApp = null;
     this.child = null;
@@ -205,17 +206,22 @@ export class CodexClient {
     }
 
     const request = message.params?.request ?? message.params ?? {};
-    const meta = request.meta ?? {};
+    const meta = request.meta ?? request._meta ?? message.params?._meta ?? {};
     const isComputerUseApproval =
-      meta.codex_approval_kind === "mcp_tool_call" &&
-      meta.connector_id === "computer-use";
+      (meta.codex_approval_kind === "mcp_tool_call" && meta.connector_id === "computer-use") ||
+      (meta.connector_name === "Computer Use" && typeof meta.tool_params?.app === "string");
     const canAccept =
       isComputerUseApproval &&
       this.autoApproveLowRiskComputerUse &&
-      meta.riskLevel !== "high";
+      (meta.riskLevel !== "high" || this.autoApproveHighRiskComputerUseApps);
+    process.stderr.write(`[computer-use approval] method=${message.method} app=${meta.tool_params?.app ?? "unknown"} risk=${meta.riskLevel ?? "unknown"} action=${canAccept ? "accept" : "decline"}\n`);
     this.send({
       id: message.id,
-      result: { action: canAccept ? "accept" : "decline", content: canAccept ? {} : null },
+      result: {
+        action: canAccept ? "accept" : "decline",
+        content: canAccept ? {} : null,
+        ...(canAccept ? { _meta: { persist: "session" } } : {}),
+      },
     });
   }
 

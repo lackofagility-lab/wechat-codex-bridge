@@ -57,6 +57,8 @@ Unknown users are denied and Codex defaults to `workspace-write`. Whole-computer
 
 Screenshots leave the computer and are uploaded to the active WeChat conversation. Never allowlist password, banking, camera, private-chat, remote-control, or other sensitive apps.
 
+`autoApproveHighRiskComputerUseApps` remains off by default. Explicitly enabling it accepts request-level approval for apps classified as high risk, but cannot bypass Computer Use's built-in product safety policy.
+
 The reusable Codex skill is in `skills/wechat-codex-bridge`.
 
 MIT licensed. This community project is not affiliated with or endorsed by Tencent or OpenAI.

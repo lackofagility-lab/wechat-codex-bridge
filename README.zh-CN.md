@@ -63,4 +63,6 @@ npm run check
 
 截图会从电脑上传到当前微信会话。请勿把聊天、密码、银行、相机、远程控制或其他敏感应用加入允许列表。
 
+`autoApproveHighRiskComputerUseApps` 默认关闭。明确设为 `true` 后，桥接会自动接受 Computer Use 对高风险应用的请求级审批，但仍不能绕过 Computer Use 内置的产品安全策略。
+
 详见 [SECURITY.md](SECURITY.md)。项目采用 MIT 许可证。

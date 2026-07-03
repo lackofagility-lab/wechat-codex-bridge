@@ -33,6 +33,29 @@ test("declines high-risk Computer Use app approval", () => {
   assert.equal(response.result.action, "decline");
 });
 
+test("accepts high-risk app approval after explicit local opt-in", () => {
+  const client = new CodexClient({
+    workspace: process.cwd(),
+    autoApproveHighRiskComputerUseApps: true,
+  });
+  let response;
+  client.send = (message) => { response = message; };
+  client.handleServerRequest({
+    id: 8,
+    method: "mcpServer/elicitation/request",
+    params: {
+      _meta: {
+        codex_approval_kind: "mcp_tool_call",
+        connector_id: "computer-use",
+        connector_name: "Computer Use",
+        riskLevel: "high",
+        tool_params: { app: "Chrome" },
+      },
+    },
+  });
+  assert.equal(response.result.action, "accept");
+});
+
 test("enables Peekaboo only for an explicitly approved macOS app", () => {
   assert.deepEqual(macComputerUseMcpArgs("win32", "Notes"), []);
   assert.deepEqual(macComputerUseMcpArgs("darwin", null), []);

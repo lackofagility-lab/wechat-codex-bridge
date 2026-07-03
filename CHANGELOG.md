@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.3 - 2026-07-03
+
+- Updated Computer Use elicitation parsing for the current app-server `_meta` schema.
+- Added an explicit local opt-in for automatic high-risk app approval.
+- Preserved the last explicitly approved app across retry/continue follow-ups.
+
 ## 1.3.2 - 2026-07-03
 
 - Fixed Windows Chrome approval by using the current exact `Google Chrome` app id.

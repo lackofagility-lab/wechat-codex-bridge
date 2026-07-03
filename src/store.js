@@ -40,6 +40,19 @@ export class SessionStore {
     this.save();
   }
 
+  getApprovedComputerUseApp(userId) {
+    return this.data.users[userId]?.approvedComputerUseApp ?? null;
+  }
+
+  setApprovedComputerUseApp(userId, appId) {
+    this.data.users[userId] = {
+      ...(this.data.users[userId] ?? {}),
+      approvedComputerUseApp: appId || null,
+      updatedAt: new Date().toISOString(),
+    };
+    this.save();
+  }
+
   resetThread(userId) {
     delete this.data.users[userId];
     this.save();
