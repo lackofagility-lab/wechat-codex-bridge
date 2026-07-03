@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.1 - 2026-07-03
+
+- Made the Windows daemon log directly to its own file so login startup works without a terminal or inherited console handles.
+- Added durable in-flight message tracking so interrupted desktop actions are not silently replayed after a crash.
+- Tightened screenshot-path parsing to prevent tool instructions from becoming fake image uploads.
+- Verified daemon recovery with no console attached and automatic service restart after a forced crash.
+
 ## 1.4.0 - 2026-07-03
 
 - Stopped restarting Windows app-server when Computer Use app scope changes.

@@ -8,6 +8,7 @@ import { terminateProcessTree } from "../src/process-tree.js";
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const stateDir = getStateDir();
 const pidPath = path.join(stateDir, "daemon.pid");
+const supervisorLogPath = path.join(stateDir, "supervisor.log");
 let child;
 let stopping = false;
 
@@ -20,20 +21,33 @@ function removeOwnPid() {
   } catch {}
 }
 
+function daemonLog(message) {
+  try {
+    fs.appendFileSync(supervisorLogPath, `${new Date().toISOString()} ${message}\n`, "utf8");
+  } catch {}
+}
+
 function launch() {
   const service = path.join(projectRoot, "src", "service.js");
+  const logFd = fs.openSync(supervisorLogPath, "a");
   child = spawn(process.execPath, [service], {
     cwd: projectRoot,
     env: process.env,
-    stdio: "inherit",
+    stdio: ["ignore", logFd, logFd],
     windowsHide: true,
   });
-  child.once("exit", (code, signal) => {
+  fs.closeSync(logFd);
+  let settled = false;
+  const restart = (reason) => {
+    if (settled) return;
+    settled = true;
     child = undefined;
     if (stopping) return;
-    console.error(`Bridge exited (${signal || code}); restarting in 5 seconds.`);
+    daemonLog(`Bridge stopped (${reason}); restarting in 5 seconds.`);
     setTimeout(launch, 5000);
-  });
+  };
+  child.once("exit", (code, signal) => restart(signal || code));
+  child.once("error", (error) => restart(error.message));
 }
 
 function stop(signal) {

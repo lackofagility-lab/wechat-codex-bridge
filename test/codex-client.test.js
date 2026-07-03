@@ -137,6 +137,11 @@ test("extracts and deduplicates screenshot outputs", () => {
   }), [dataUrl, "/tmp/final.png", "playwright-output.png"]);
 });
 
+test("does not treat screenshot instructions as a file path", () => {
+  const text = "\\ Screenshot viewport and save it as .\\google-home.png";
+  assert.deepEqual(extractScreenshotSources({ type: "text", text }), [".\\google-home.png"]);
+});
+
 test("resolves relative Playwright screenshots from the managed output directory", () => {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "wechat-codex-source-"));
   const output = path.join(workspace, ".wechat-codex-screenshots");
@@ -144,4 +149,14 @@ test("resolves relative Playwright screenshots from the managed output directory
   fs.writeFileSync(path.join(output, "shot.png"), "png");
   assert.equal(resolveScreenshotSource("shot.png", workspace), path.join(output, "shot.png"));
   fs.rmSync(workspace, { recursive: true, force: true });
+});
+
+test("drops nonexistent screenshot paths extracted from tool prose", () => {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "wechat-codex-missing-source-"));
+  try {
+    assert.equal(resolveScreenshotSource("\\ Screenshot viewport and save it as .\\missing.png", workspace), null);
+    assert.equal(resolveScreenshotSource(path.join(workspace, "missing.png"), workspace), null);
+  } finally {
+    fs.rmSync(workspace, { recursive: true, force: true });
+  }
 });

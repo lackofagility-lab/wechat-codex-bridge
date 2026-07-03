@@ -1,6 +1,6 @@
 {
   "name": "wechat-codex-bridge",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Secure cross-platform bridge between WeChat ClawBot and local Codex",
   "private": true,
   "files": [

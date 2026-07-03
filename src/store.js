@@ -23,8 +23,9 @@ export function writeJsonAtomic(filePath, value) {
 export class SessionStore {
   constructor(filePath) {
     this.filePath = filePath;
-    this.data = readJson(filePath, { users: {}, processedMessageIds: [], acknowledgedMessageIds: [] });
+    this.data = readJson(filePath, { users: {}, processedMessageIds: [], acknowledgedMessageIds: [], inFlightMessageIds: [] });
     this.data.acknowledgedMessageIds ??= [];
+    this.data.inFlightMessageIds ??= [];
   }
 
   getThread(userId) {
@@ -81,6 +82,20 @@ export class SessionStore {
       ...this.data.processedMessageIds.filter((item) => item !== id),
       id,
     ].slice(-500);
+    this.data.inFlightMessageIds = this.data.inFlightMessageIds.filter((item) => item !== id);
+    this.save();
+  }
+
+  isInFlight(messageId) {
+    return this.data.inFlightMessageIds.includes(String(messageId));
+  }
+
+  markInFlight(messageId) {
+    const id = String(messageId);
+    this.data.inFlightMessageIds = [
+      ...this.data.inFlightMessageIds.filter((item) => item !== id),
+      id,
+    ].slice(-100);
     this.save();
   }
 

@@ -32,3 +32,20 @@ test("persists the last explicitly approved Computer Use app", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("persists in-flight messages and clears them only after completion", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wechat-codex-inflight-"));
+  const filePath = path.join(dir, "sessions.json");
+  try {
+    const first = new SessionStore(filePath);
+    first.markInFlight("message-1");
+    const second = new SessionStore(filePath);
+    assert.equal(second.isInFlight("message-1"), true);
+    second.markProcessed("message-1");
+    const third = new SessionStore(filePath);
+    assert.equal(third.isInFlight("message-1"), false);
+    assert.equal(third.hasProcessed("message-1"), true);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

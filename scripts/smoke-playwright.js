@@ -13,7 +13,7 @@ const cli = path.join(path.dirname(packageRequire.resolve("@playwright/mcp")), "
 const outputDir = path.join(root, ".wechat-codex-screenshots");
 const screenshotName = `mcp-smoke-${Date.now()}.png`;
 fs.mkdirSync(outputDir, { recursive: true });
-const child = spawn(process.execPath, [cli, "--browser", "chrome", "--headless", "--output-dir", outputDir], {
+const child = spawn(process.execPath, [cli, "--browser", "chrome", "--headless", "--isolated", "--output-dir", outputDir], {
   cwd: root,
   stdio: ["pipe", "pipe", "pipe"],
   windowsHide: true,

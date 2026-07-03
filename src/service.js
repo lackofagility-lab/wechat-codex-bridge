@@ -50,6 +50,20 @@ function log(message, error = null) {
   console.log(message);
 }
 
+function cleanupManagedScreenshot(source) {
+  if (typeof source !== "string" || /^data:|^https?:/i.test(source)) return;
+  let localPath;
+  try {
+    localPath = /^file:\/\//i.test(source)
+      ? fileURLToPath(source)
+      : path.resolve(config.workspace, source);
+  } catch { return; }
+  const relative = path.relative(managedScreenshotDir, localPath);
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) return;
+  try { fs.rmSync(localPath, { force: true }); }
+  catch (error) { log(`managed screenshot cleanup failed path=${localPath}`, error); }
+}
+
 function loadConfig() {
   return readJson(configPath, {
     workspace: projectRoot,
@@ -107,6 +121,7 @@ try {
 }
 
 const config = loadConfig();
+const managedScreenshotDir = path.resolve(config.workspace, ".wechat-codex-screenshots");
 const credentials = readJson(credentialsPath, null);
 if (!credentials?.token || !credentials?.baseUrl) {
   throw new Error(`Missing WeChat credentials: ${credentialsPath}`);
@@ -181,6 +196,18 @@ async function handleMessage(rawMessage) {
 
   log(`message received id=${message.id} user=${message.from}`);
   const directReply = commandReply(message.text, message.from, sessions);
+  if (!directReply && sessions.isInFlight(message.id)) {
+    await wechat.sendText({
+      to: message.from,
+      text: "上次处理被电脑重启或服务中断。为避免重复执行操作，我没有自动重做；请确认电脑当前状态后发送“重试”。",
+      contextToken: message.contextToken,
+      clientId: `codex-interrupted-${message.id}`,
+    });
+    sessions.markProcessed(message.id);
+    log(`interrupted message suppressed id=${message.id}`);
+    return true;
+  }
+  if (!directReply) sessions.markInFlight(message.id);
   try {
     let reply = directReply;
     let rememberTurn = false;
@@ -218,7 +245,7 @@ async function handleMessage(rawMessage) {
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
         try {
           const platformPolicy = useBrowserBackend
-            ? `This is a web-navigation task. Use the playwright MCP tools instead of desktop Computer Use because desktop browser control cannot reliably verify page URLs. Complete the user's request in the managed Chrome profile and finish with browser_take_screenshot so the image can be sent to WeChat. Do not use shell commands.\n\n`
+            ? `This is a web-navigation task. Use the playwright MCP tools instead of desktop Computer Use because desktop browser control cannot reliably verify page URLs. Complete the user's request in the managed Chrome profile and finish by calling browser_take_screenshot without a filename so the image can be sent directly to WeChat. Do not use shell commands.\n\n`
             : approvedApp
             ? process.platform === "darwin"
               ? `Use the Peekaboo MCP tools for macOS desktop control in this turn. The explicitly approved app is ${approvedApp}; control and capture only that app window, never the full desktop. This Computer Use turn MUST finish by taking a fresh screenshot of the approved app so it can be sent to WeChat. Ask before sending, deleting, installing, submitting, purchasing, changing accounts, or transmitting sensitive data. Do not use AppleScript or shell input automation.\n\n`
@@ -238,7 +265,7 @@ async function handleMessage(rawMessage) {
       if ((approvedApp || useBrowserBackend) && config.computerUseScreenshots !== false && !(result.screenshots?.length)) {
         log(`automation produced no screenshot; requesting final capture id=${message.id}`);
         const capturePrompt = useBrowserBackend
-          ? "Use playwright browser_take_screenshot to capture the current managed browser page. Do not change the page."
+          ? "Use playwright browser_take_screenshot without a filename to capture the current managed browser page and return the image directly. Do not change the page."
           : process.platform === "darwin"
           ? `Use Peekaboo to take one fresh, read-only screenshot of only the approved ${approvedApp} app window. Do not change the UI or capture the full desktop.`
           : `Use the installed Computer Use skill to take one fresh, read-only screenshot of the approved ${approvedApp} app. Do not change the UI. You must actually call the screenshot/snapshot tool.`;
@@ -276,6 +303,8 @@ async function handleMessage(rawMessage) {
       } catch (error) {
         screenshotFailures += 1;
         log(`screenshot failed id=${message.id} index=${index}`, error);
+      } finally {
+        cleanupManagedScreenshot(source);
       }
     }
     if (screenshotFailures) {

@@ -76,7 +76,7 @@ export function extractScreenshotSources(item, limit = 3) {
       if (typeof value === "string") {
         const markdownTargets = [...value.matchAll(/\]\(([^)\n\r]+?\.(?:png|jpe?g|webp)(?:\?[^)]*)?)\)/gi)];
         for (const match of markdownTargets) add(match[1]);
-        const references = value.match(/(?:data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=]+|file:\/\/[^\s)'"<>]+|(?:[A-Za-z]:[\\/]|\.{0,2}[\\/]|\/)[^\n\r)'"<>]+?\.(?:png|jpe?g|webp))/gi) ?? [];
+        const references = value.match(/(?:data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=]+|file:\/\/[^\s)'"<>]+|[A-Za-z]:[\\/][^\n\r)'"<>]+?\.(?:png|jpe?g|webp)|\.{1,2}[\\/][^\s)'"<>]+?\.(?:png|jpe?g|webp)|\/[^\n\r)'"<>]+?\.(?:png|jpe?g|webp))/gi) ?? [];
         for (const reference of references) add(reference);
       }
       return;
@@ -92,14 +92,15 @@ export function extractScreenshotSources(item, limit = 3) {
 }
 
 export function resolveScreenshotSource(source, workspace) {
-  if (typeof source !== "string" || /^data:image\//i.test(source) || /^https?:\/\//i.test(source) || /^file:\/\//i.test(source) || path.isAbsolute(source)) {
+  if (typeof source !== "string" || /^data:image\//i.test(source) || /^https?:\/\//i.test(source) || /^file:\/\//i.test(source)) {
     return source;
   }
+  if (path.isAbsolute(source)) return fs.existsSync(source) ? source : null;
   const workspaceCandidate = path.resolve(workspace, source);
   const outputCandidate = path.resolve(workspace, ".wechat-codex-screenshots", source);
   if (fs.existsSync(workspaceCandidate)) return workspaceCandidate;
   if (fs.existsSync(outputCandidate)) return outputCandidate;
-  return workspaceCandidate;
+  return null;
 }
 
 export class CodexClient {
@@ -207,7 +208,8 @@ export class CodexClient {
       if (turnId && this.turns.get(turnId)?.captureScreenshots && item?.type !== "agentMessage") {
         const existing = this.turnScreenshots.get(turnId) ?? [];
         const next = extractScreenshotSources(item, this.computerUseMaxScreenshots)
-          .map((source) => resolveScreenshotSource(source, this.workspace));
+          .map((source) => resolveScreenshotSource(source, this.workspace))
+          .filter(Boolean);
         if (next.length) {
           const merged = [...new Set([...existing, ...next])];
           this.turnScreenshots.set(turnId, merged.slice(-this.computerUseMaxScreenshots));
