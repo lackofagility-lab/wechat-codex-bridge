@@ -16,6 +16,14 @@ const approvalPolicy = {
   },
 };
 
+export function macComputerUseMcpArgs(platform, approvedApp) {
+  if (platform !== "darwin" || !approvedApp) return [];
+  return [
+    "-c", 'mcp_servers.peekaboo.command="npx"',
+    "-c", 'mcp_servers.peekaboo.args=["-y","@steipete/peekaboo"]',
+  ];
+}
+
 export class CodexClient {
   constructor({ workspace, model, modelProvider = null, sandbox = "workspace-write", thinking = "medium", timeoutMs = 900000, autoApproveLowRiskComputerUse = true }) {
     this.workspace = workspace;
@@ -66,6 +74,7 @@ export class CodexClient {
         `mcp_servers.node_repl.env.NODE_REPL_REQUEST_META=${JSON.stringify(requestMeta)}`,
       );
     }
+    args.push(...macComputerUseMcpArgs(process.platform, this.approvedComputerUseApp));
     this.child = spawn(process.execPath, args, {
       cwd: this.workspace,
       windowsHide: true,

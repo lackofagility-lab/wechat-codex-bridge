@@ -1,21 +1,22 @@
 ---
 name: wechat-codex-bridge
-description: Install, configure, diagnose, update, or uninstall the open-source WeChat Codex Bridge on Windows or macOS. Use when a user wants to chat with local Codex through WeChat ClawBot, pair an authorized WeChat account, enable scoped Windows Computer Use, repair delayed or duplicate replies, inspect the native background service, or manage bridge memory and security.
+description: Install, configure, diagnose, update, or uninstall the open-source WeChat Codex Bridge on Windows or macOS. Use when a user wants to chat with local Codex through WeChat ClawBot, pair an authorized WeChat account, enable scoped desktop control through Windows Computer Use or macOS Peekaboo, repair delayed or duplicate replies, inspect the native background service, or manage bridge memory and security.
 ---
 
 # WeChat Codex Bridge
 
 Operate the cross-platform bridge that connects Tencent WeChat ClawBot directly to the local Codex app-server.
 
-When desktop control is enabled, route Windows UI requests through the installed `computer-use` skill. Preserve its confirmation policy; never replace it with ad-hoc SendKeys or shell-based UI automation.
+Detect the operating system before setup. On Windows, route UI requests through the official `computer-use` skill. On macOS, use the project-configured Peekaboo MCP backend. Preserve confirmation policy on both; never replace either with ad-hoc SendKeys, AppleScript, or shell-based UI automation.
 
 ## Install
 
 1. Require Windows 10/11 or macOS, Node.js 22+, Git, and a working `codex` login.
-   Require the Codex desktop app and installed Computer Use plugin only when desktop control is requested.
+   Require Codex desktop and Computer Use for Windows desktop control. On macOS, disclose that desktop control uses third-party open-source Peekaboo and requires user-approved Accessibility and Screen Recording permissions.
 2. Clone the project repository into a user-selected folder.
 3. Run `npm install`, then `npm run setup`. The Node installer selects a no-admin Windows user startup entry or macOS launchd; do not require PowerShell.
 4. Let Tencent's official installer display the QR code when credentials are absent.
+   On macOS, never bypass TCC. Tell the user to approve the terminal/Codex host under System Settings > Privacy & Security > Accessibility and Screen Recording when first prompted.
 5. Tell the user to send the printed `/pair NNNNNN` command to the bot.
 6. Run `npm run status`, `npm test`, and `npm run check`; verify exactly one bridge process.
 
@@ -48,7 +49,7 @@ Run `npm run status`. Then inspect only the relevant tail of the reported `bridg
 
 Read `references/computer-use.md` before changing app approval, aliases, sandbox access, or desktop-control behavior.
 
-Computer Use app approval is exact and per app id. Resolve a natural-language alias from `computerUseAppAliases`, restart only the bridge-owned app-server when the approved app scope changes, and inject `x-oai-cua-approved-app` through the temporary `NODE_REPL_REQUEST_META` MCP config override. Do not modify global Codex config or plugin caches.
+Desktop approval is exact and per app. Windows resolves `computerUseAppAliases` and injects temporary `x-oai-cua-approved-app` metadata. macOS resolves `macComputerUseAppAliases` and exposes Peekaboo only to the bridge-owned app-server and only for that scoped turn. Do not modify global Codex config or plugin caches.
 
 Use GPT-5.4 with the HTTP-only provider on installations where the latest default model is incompatible with the internal Responses Lite route. Prefer the standard Codex provider and managed login for new public installations.
 

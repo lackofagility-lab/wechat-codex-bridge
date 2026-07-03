@@ -114,6 +114,10 @@ function setup() {
     run(commandName("npx"), ["-y", "@tencent-weixin/openclaw-weixin-cli@latest", "install"]);
   }
   run(process.execPath, [path.join(projectRoot, "scripts", "import-openclaw-credentials.js")]);
+  if (process.platform === "darwin") {
+    console.log("macOS desktop control uses @steipete/peekaboo through MCP.");
+    console.log("On first use, approve the terminal/Codex host in System Settings > Privacy & Security > Accessibility and Screen Recording.");
+  }
   install();
 }
 

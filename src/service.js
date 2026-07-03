@@ -19,6 +19,15 @@ const memoryPath = path.join(stateDir, "memory.json");
 const accessPath = path.join(stateDir, "access.json");
 const logPath = path.join(stateDir, "bridge.log");
 const instanceLockPort = 47653;
+const defaultMacComputerUseAppAliases = {
+  "safari": "Safari", "notes": "Notes", "备忘录": "Notes",
+  "textedit": "TextEdit", "文本编辑": "TextEdit",
+  "finder": "Finder", "访达": "Finder",
+  "preview": "Preview", "预览": "Preview",
+  "calculator": "Calculator", "计算器": "Calculator",
+  "pages": "Pages", "numbers": "Numbers", "keynote": "Keynote",
+  "chrome": "Google Chrome", "google": "Google Chrome",
+};
 
 function log(message, error = null) {
   fs.mkdirSync(stateDir, { recursive: true });
@@ -59,6 +68,7 @@ function loadConfig() {
       "clock": "Microsoft.WindowsAlarms_8wekyb3d8bbwe!App",
       "docker": "Docker.DockerForWindows.Settings",
     },
+    macComputerUseAppAliases: defaultMacComputerUseAppAliases,
   });
 }
 
@@ -138,7 +148,10 @@ let stopping = false;
 function approvedComputerUseApp(text) {
   if (config.computerUseEnabled === false) return null;
   const normalized = text.toLowerCase();
-  for (const [alias, appId] of Object.entries(config.computerUseAppAliases ?? {})) {
+  const aliases = process.platform === "darwin"
+    ? (config.macComputerUseAppAliases ?? defaultMacComputerUseAppAliases)
+    : config.computerUseAppAliases;
+  for (const [alias, appId] of Object.entries(aliases ?? {})) {
     if (normalized.includes(alias.toLowerCase())) return appId;
   }
   return null;
@@ -190,10 +203,14 @@ async function handleMessage(rawMessage) {
       }
       let result;
       let lastError;
-      codex.setApprovedComputerUseApp(approvedComputerUseApp(message.text));
+      const approvedApp = approvedComputerUseApp(message.text);
+      codex.setApprovedComputerUseApp(approvedApp);
       for (let attempt = 1; attempt <= 3; attempt += 1) {
         try {
-          const prompt = memory.buildPrompt(message.from, message.text);
+          const platformPolicy = process.platform === "darwin" && approvedApp
+            ? `Use the Peekaboo MCP tools for macOS desktop control in this turn. The explicitly approved app is ${approvedApp}; control only that app. Ask before sending, deleting, installing, submitting, purchasing, changing accounts, or transmitting sensitive data. Do not use AppleScript or shell input automation.\n\n`
+            : "";
+          const prompt = platformPolicy + memory.buildPrompt(message.from, message.text);
           result = await codexReady.then(() => codex.run(prompt, existingThread));
           break;
         } catch (error) {

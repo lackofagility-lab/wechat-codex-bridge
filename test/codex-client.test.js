@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CodexClient } from "../src/codex-client.js";
+import { CodexClient, macComputerUseMcpArgs } from "../src/codex-client.js";
 
 function approval(riskLevel) {
   return {
@@ -31,4 +31,13 @@ test("declines high-risk Computer Use app approval", () => {
   client.send = (message) => { response = message; };
   client.handleServerRequest(approval("high"));
   assert.equal(response.result.action, "decline");
+});
+
+test("enables Peekaboo only for an explicitly approved macOS app", () => {
+  assert.deepEqual(macComputerUseMcpArgs("win32", "Notes"), []);
+  assert.deepEqual(macComputerUseMcpArgs("darwin", null), []);
+  assert.deepEqual(macComputerUseMcpArgs("darwin", "Notes"), [
+    "-c", 'mcp_servers.peekaboo.command="npx"',
+    "-c", 'mcp_servers.peekaboo.args=["-y","@steipete/peekaboo"]',
+  ]);
 });

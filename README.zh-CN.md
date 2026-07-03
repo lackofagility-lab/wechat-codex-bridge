@@ -9,7 +9,7 @@
 - 登录自启、断线重连、崩溃自愈、单实例运行
 - 防止重复“收到”和重复最终回复
 - 保存近期对话与每日记忆
-- Windows 可选官方 Computer Use，控制明确点名且允许的应用
+- Windows 使用官方 Computer Use；macOS 使用 Peekaboo MCP，均只控制明确点名且允许的应用
 
 ## 安装
 
@@ -44,9 +44,10 @@ npm run check
 
 ## 平台能力
 
-- Windows 与 macOS：微信聊天、Codex 文件操作、终端任务、记忆、自启和恢复。
-- Windows：支持当前官方 Computer Use 插件。
-- macOS：当前官方 Computer Use 运行时没有提供等价能力，因此本项目不会用 AppleScript 冒充或绕过其审批机制。
+- Windows 与 macOS 均支持微信聊天、文件与终端任务、记忆、自启、恢复和桌面应用控制。
+- Windows 使用 Codex 官方 Computer Use；macOS 自动接入开源 Peekaboo MCP。
+- 两端都只有在消息明确点名 `config.json` 中登记的应用时才启用桌面控制，高风险外部操作仍需确认。
+- Peekaboo 是第三方后端，并非 OpenAI 官方 Computer Use。首次使用由 `npx` 获取，用户必须亲自在系统设置中批准“辅助功能”和“屏幕录制”。
 
 ## 局限
 

@@ -11,7 +11,7 @@ Connect WeChat ClawBot directly to local Codex on Windows or macOS. Tencent's Op
 - Durable memory and daily notes
 - Exactly-once acknowledgements and replies
 - Login auto-start, reconnect, crash recovery, and a single-instance lock
-- Optional scoped Windows Computer Use
+- Scoped desktop control: official Computer Use on Windows and Peekaboo MCP on macOS
 
 ## Install
 
@@ -39,9 +39,9 @@ Uninstall preserves credentials, memory, and configuration.
 
 ## Platform support
 
-- Windows and macOS: WeChat chat, Codex file and terminal work, memory, auto-start, and recovery.
-- Windows: current official Computer Use plugin support.
-- macOS: the current official Computer Use runtime has no equivalent Mac implementation. This project does not disguise AppleScript as Computer Use or bypass its approval model.
+- Windows and macOS both support chat, file and terminal work, memory, auto-start, recovery, and scoped desktop control.
+- Windows uses the official Codex Computer Use plugin. macOS exposes the open-source [Peekaboo](https://github.com/openclaw/Peekaboo) MCP server only for turns that explicitly name an allowlisted app.
+- Peekaboo is a third-party backend, not OpenAI's official Computer Use. First use downloads it through `npx` and requires user-granted Accessibility and Screen Recording permissions.
 
 ## Limitations
 

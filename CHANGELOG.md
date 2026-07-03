@@ -1,11 +1,16 @@
 # Changelog
 
+## 1.2.0 - 2026-07-03
+
+- Added OS-selected desktop control: official Computer Use on Windows and scoped Peekaboo MCP on macOS.
+- Added macOS app aliases, TCC permission guidance, and per-turn backend gating.
+
 ## 1.1.0 - 2026-07-03
 
 - Added one cross-platform Node CLI for setup, native service installation, status, and uninstall.
 - Added macOS launchd support and removed PowerShell from the primary Windows path.
 - Added portable state directories and a crash-restarting daemon.
-- Kept official Computer Use on Windows; macOS desktop control awaits an equivalent supported runtime.
+- Kept official Computer Use on Windows while preparing the cross-platform installer.
 
 ## 1.0.0 - 2026-07-02
 
