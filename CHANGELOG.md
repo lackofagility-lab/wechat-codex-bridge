@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1 - 2026-07-03
+
+- Require every actual Computer Use turn to finish with an approved-app screenshot.
+- Retry once with a read-only capture when the primary turn emits no image.
+
 ## 1.3.0 - 2026-07-03
 
 - Added encrypted Computer Use screenshot delivery to WeChat on Windows and macOS.

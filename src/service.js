@@ -213,8 +213,10 @@ async function handleMessage(rawMessage) {
       codex.setApprovedComputerUseApp(approvedApp);
       for (let attempt = 1; attempt <= 3; attempt += 1) {
         try {
-          const platformPolicy = process.platform === "darwin" && approvedApp
-            ? `Use the Peekaboo MCP tools for macOS desktop control in this turn. The explicitly approved app is ${approvedApp}; control and capture only that app window, never the full desktop. Ask before sending, deleting, installing, submitting, purchasing, changing accounts, or transmitting sensitive data. Do not use AppleScript or shell input automation.\n\n`
+          const platformPolicy = approvedApp
+            ? process.platform === "darwin"
+              ? `Use the Peekaboo MCP tools for macOS desktop control in this turn. The explicitly approved app is ${approvedApp}; control and capture only that app window, never the full desktop. This Computer Use turn MUST finish by taking a fresh screenshot of the approved app so it can be sent to WeChat. Ask before sending, deleting, installing, submitting, purchasing, changing accounts, or transmitting sensitive data. Do not use AppleScript or shell input automation.\n\n`
+              : `Use the installed Computer Use skill for the explicitly approved Windows app ${approvedApp}. This Computer Use turn MUST finish by taking a fresh screenshot of that app so it can be sent to WeChat. Follow the Computer Use confirmation policy and do not substitute PowerShell or SendKeys.\n\n`
             : "";
           const prompt = platformPolicy + memory.buildPrompt(message.from, message.text);
           result = await codexReady.then(() => codex.run(prompt, existingThread));
@@ -227,6 +229,18 @@ async function handleMessage(rawMessage) {
         }
       }
       if (!result) throw lastError;
+      if (approvedApp && config.computerUseScreenshots !== false && !(result.screenshots?.length)) {
+        log(`computer use produced no screenshot; requesting final capture id=${message.id}`);
+        const capturePrompt = process.platform === "darwin"
+          ? `Use Peekaboo to take one fresh, read-only screenshot of only the approved ${approvedApp} app window. Do not change the UI or capture the full desktop.`
+          : `Use the installed Computer Use skill to take one fresh, read-only screenshot of the approved ${approvedApp} app. Do not change the UI. You must actually call the screenshot/snapshot tool.`;
+        const capture = await codex.run(capturePrompt, result.threadId || existingThread);
+        if (capture.threadId) result.threadId = capture.threadId;
+        result.screenshots = capture.screenshots ?? [];
+        if (!result.screenshots.length) {
+          result.text += "\n\n（Computer Use 已执行，但截图通道没有返回图像。）";
+        }
+      }
       if (result.threadId) sessions.setThread(message.from, result.threadId);
       reply = result.text;
       screenshots = result.screenshots ?? [];

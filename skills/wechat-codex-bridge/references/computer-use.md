@@ -24,7 +24,7 @@
 
 Default-deny private categories: chat and meeting clients, password managers, banking/payment software, cameras, private browsers, remote-control tools, security settings, uninstallers, and cloud drives. Chrome may be allowed when the operator explicitly chooses it.
 
-When screenshot delivery is enabled, capture only the approved application window. At most `computerUseMaxScreenshots` images are encrypted and sent to the paired user's active WeChat context. Do not forward unrelated desktop, notification, or sensitive-app imagery.
+When screenshot delivery is enabled, every actual Computer Use turn must end with a fresh capture of only the approved application window. If no image is emitted, retry once with a read-only capture request in the same thread. At most `computerUseMaxScreenshots` images are encrypted and sent to the paired user's active WeChat context. Do not forward unrelated desktop, notification, or sensitive-app imagery.
 
 ## Common Windows ids
 

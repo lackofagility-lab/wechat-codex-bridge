@@ -51,7 +51,7 @@ Read `references/computer-use.md` before changing app approval, aliases, sandbox
 
 Desktop approval is exact and per app. Windows resolves `computerUseAppAliases` and injects temporary `x-oai-cua-approved-app` metadata. macOS resolves `macComputerUseAppAliases` and exposes Peekaboo only to the bridge-owned app-server and only for that scoped turn. Do not modify global Codex config or plugin caches.
 
-When `computerUseScreenshots` is enabled, return only screenshots emitted by the approved app-control turn. The bridge encrypts and uploads at most `computerUseMaxScreenshots` images with deterministic message IDs. Never capture the full macOS desktop when an app window can be scoped. Explain that screenshots leave the computer and enter the paired WeChat conversation.
+When `computerUseScreenshots` is enabled, every actual Computer Use turn must end with a fresh screenshot of the approved app. If the main turn emits none, issue one read-only capture follow-up in the same thread. Return only screenshots from that approved app-control turn. The bridge encrypts and uploads at most `computerUseMaxScreenshots` images with deterministic message IDs. Never capture the full macOS desktop when an app window can be scoped. Explain that screenshots leave the computer and enter the paired WeChat conversation.
 
 Use GPT-5.4 with the HTTP-only provider on installations where the latest default model is incompatible with the internal Responses Lite route. Prefer the standard Codex provider and managed login for new public installations.
 
