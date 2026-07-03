@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.2 - 2026-07-03
+
+- Fixed Windows Chrome approval by using the current exact `Google Chrome` app id.
+- Added YouTube aliases so browser-control turns receive the correct approval scope.
+
 ## 1.3.1 - 2026-07-03
 
 - Require every actual Computer Use turn to finish with an approved-app screenshot.
