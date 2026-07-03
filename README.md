@@ -12,6 +12,7 @@ Connect WeChat ClawBot directly to local Codex on Windows or macOS. Tencent's Op
 - Exactly-once acknowledgements and replies
 - Login auto-start, reconnect, crash recovery, and a single-instance lock
 - Scoped desktop control: official Computer Use on Windows and Peekaboo MCP on macOS
+- Encrypted Computer Use screenshot delivery to the active WeChat conversation
 
 ## Install
 
@@ -48,11 +49,13 @@ Uninstall preserves credentials, memory, and configuration.
 - Phone and Codex desktop conversations are separate and cannot yet be listed or switched from WeChat.
 - Screen lock and display-off are supported. Sleep, hibernation, shutdown, or network loss pauses replies until resume.
 - Initial QR login uses Tencent's official OpenClaw WeChat tool, though runtime conversations do not use an OpenClaw agent.
-- Replies are text-first; Computer Use screenshots are not sent to WeChat yet.
+- Up to three Computer Use screenshots are returned per turn by default. Set `computerUseScreenshots` to `false` or adjust `computerUseMaxScreenshots` locally.
 
 ## Security and skill
 
 Unknown users are denied and Codex defaults to `workspace-write`. Whole-computer access is an explicit local opt-in. Computer Use uses exact per-app approval, not a wildcard. See [SECURITY.md](SECURITY.md).
+
+Screenshots leave the computer and are uploaded to the active WeChat conversation. Never allowlist password, banking, camera, private-chat, remote-control, or other sensitive apps.
 
 The reusable Codex skill is in `skills/wechat-codex-bridge`.
 

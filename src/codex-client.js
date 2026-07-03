@@ -24,8 +24,44 @@ export function macComputerUseMcpArgs(platform, approvedApp) {
   ];
 }
 
+function looksLikeImageReference(value) {
+  return typeof value === "string" && (
+    /^data:image\/(?:png|jpe?g|webp);base64,/i.test(value) ||
+    /^file:\/\//i.test(value) ||
+    /\.(?:png|jpe?g|webp)(?:\?.*)?$/i.test(value)
+  );
+}
+
+export function extractScreenshotSources(item, limit = 3) {
+  const found = [];
+  const seen = new Set();
+  function add(value) {
+    if (!looksLikeImageReference(value) || seen.has(value) || found.length >= limit) return;
+    seen.add(value);
+    found.push(value);
+  }
+  function visit(value, key = "") {
+    if (found.length >= limit || value == null) return;
+    if (Array.isArray(value)) {
+      for (const entry of value) visit(entry, key);
+      return;
+    }
+    if (typeof value !== "object") {
+      if (/image|screenshot|path|url/i.test(key)) add(value);
+      return;
+    }
+    if (value.type === "image" && typeof value.data === "string") {
+      add(`data:${value.mimeType || "image/png"};base64,${value.data}`);
+    }
+    if (value.type === "inputImage" && typeof value.imageUrl === "string") add(value.imageUrl);
+    for (const [childKey, child] of Object.entries(value)) visit(child, childKey);
+  }
+  visit(item);
+  return found;
+}
+
 export class CodexClient {
-  constructor({ workspace, model, modelProvider = null, sandbox = "workspace-write", thinking = "medium", timeoutMs = 900000, autoApproveLowRiskComputerUse = true }) {
+  constructor({ workspace, model, modelProvider = null, sandbox = "workspace-write", thinking = "medium", timeoutMs = 900000, autoApproveLowRiskComputerUse = true, computerUseMaxScreenshots = 3 }) {
     this.workspace = workspace;
     this.model = model;
     this.modelProvider = modelProvider;
@@ -33,12 +69,14 @@ export class CodexClient {
     this.thinking = thinking;
     this.timeoutMs = timeoutMs;
     this.autoApproveLowRiskComputerUse = autoApproveLowRiskComputerUse;
+    this.computerUseMaxScreenshots = Math.max(0, Math.min(10, Number(computerUseMaxScreenshots) || 0));
     this.approvedComputerUseApp = null;
     this.child = null;
     this.nextId = 1;
     this.requests = new Map();
     this.turns = new Map();
     this.loadedThreads = new Set();
+    this.turnScreenshots = new Map();
     this.startPromise = null;
   }
 
@@ -130,6 +168,14 @@ export class CodexClient {
       if (item?.type === "agentMessage" && this.turns.has(turnId)) {
         this.turns.get(turnId).messages.push(item.text);
       }
+      if (turnId && this.approvedComputerUseApp && item?.type !== "agentMessage") {
+        const existing = this.turnScreenshots.get(turnId) ?? [];
+        const next = extractScreenshotSources(item, this.computerUseMaxScreenshots);
+        if (next.length) {
+          const merged = [...new Set([...existing, ...next])];
+          this.turnScreenshots.set(turnId, merged.slice(-this.computerUseMaxScreenshots));
+        }
+      }
       return;
     }
     if (message.method === "turn/completed") {
@@ -143,8 +189,12 @@ export class CodexClient {
       } else if (!pending.messages.length) {
         pending.reject(new Error("Codex returned no assistant message"));
       } else {
-        pending.resolve(pending.messages.at(-1));
+        pending.resolve({
+          text: pending.messages.at(-1),
+          screenshots: this.turnScreenshots.get(turn.id) ?? [],
+        });
       }
+      this.turnScreenshots.delete(turn.id);
     }
   }
 
@@ -202,6 +252,7 @@ export class CodexClient {
     this.requests.clear();
     this.turns.clear();
     this.loadedThreads.clear();
+    this.turnScreenshots.clear();
     this.child = null;
   }
 
@@ -264,7 +315,7 @@ export class CodexClient {
     });
     const turnId = result?.turn?.id;
     if (!turnId) throw new Error("Codex did not return a turn id");
-    const text = await new Promise((resolve, reject) => {
+    const completed = await new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.turns.delete(turnId);
         const error = new Error(`Codex turn timed out after ${this.timeoutMs}ms`);
@@ -273,6 +324,6 @@ export class CodexClient {
       }, this.timeoutMs);
       this.turns.set(turnId, { resolve, reject, timer, messages: [] });
     });
-    return { threadId: activeThreadId, text };
+    return { threadId: activeThreadId, text: completed.text, screenshots: completed.screenshots };
   }
 }

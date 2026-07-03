@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0 - 2026-07-03
+
+- Added encrypted Computer Use screenshot delivery to WeChat on Windows and macOS.
+- Added screenshot extraction for MCP image blocks, data URLs, and local image paths.
+- Added deterministic screenshot IDs, a three-image default limit, and a local disable switch.
+
 ## 1.2.0 - 2026-07-03
 
 - Added OS-selected desktop control: official Computer Use on Windows and scoped Peekaboo MCP on macOS.

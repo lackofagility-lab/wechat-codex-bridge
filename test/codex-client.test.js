@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CodexClient, macComputerUseMcpArgs } from "../src/codex-client.js";
+import { CodexClient, extractScreenshotSources, macComputerUseMcpArgs } from "../src/codex-client.js";
 
 function approval(riskLevel) {
   return {
@@ -40,4 +40,16 @@ test("enables Peekaboo only for an explicitly approved macOS app", () => {
     "-c", 'mcp_servers.peekaboo.command="npx"',
     "-c", 'mcp_servers.peekaboo.args=["-y","@steipete/peekaboo"]',
   ]);
+});
+
+test("extracts and deduplicates screenshot outputs", () => {
+  const dataUrl = "data:image/png;base64,aGVsbG8=";
+  assert.deepEqual(extractScreenshotSources({
+    type: "mcpToolCall",
+    result: { content: [
+      { type: "image", mimeType: "image/png", data: "aGVsbG8=" },
+      { imageUrl: dataUrl },
+      { screenshotPath: "/tmp/final.png" },
+    ] },
+  }), [dataUrl, "/tmp/final.png"]);
 });

@@ -10,6 +10,7 @@
 - 防止重复“收到”和重复最终回复
 - 保存近期对话与每日记忆
 - Windows 使用官方 Computer Use；macOS 使用 Peekaboo MCP，均只控制明确点名且允许的应用
+- Computer Use 完成后自动把应用截图加密上传并发送到当前微信会话
 
 ## 安装
 
@@ -54,10 +55,12 @@ npm run check
 - 微信端与 Codex 桌面端会话彼此独立，暂时不能查看或切换桌面聊天。
 - 锁屏和关闭显示器时桥接仍可回复；真正睡眠、休眠、关机或断网时会暂停，恢复后自动继续。
 - 首次扫码借助腾讯官方 OpenClaw 微信工具取得凭据，但运行时不经过 OpenClaw Agent。
-- 回复以文字为主，Computer Use 截图尚不会回传微信。
+- 每轮默认最多回传 3 张截图；可用 `computerUseScreenshots` 关闭，或用 `computerUseMaxScreenshots` 调整数量。
 
 ## 安全
 
 默认使用 `workspace-write`。只有明确理解风险时才改为 `danger-full-access`。Computer Use 使用逐应用授权，不开放“所有应用”通配权限。
+
+截图会从电脑上传到当前微信会话。请勿把聊天、密码、银行、相机、远程控制或其他敏感应用加入允许列表。
 
 详见 [SECURITY.md](SECURITY.md)。项目采用 MIT 许可证。

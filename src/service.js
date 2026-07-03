@@ -51,6 +51,8 @@ function loadConfig() {
     allowedUserIds: [],
     computerUseEnabled: true,
     autoApproveLowRiskComputerUse: true,
+    computerUseScreenshots: true,
+    computerUseMaxScreenshots: 3,
     computerUseAppAliases: {
       "记事本": "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App",
       "notepad": "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App",
@@ -133,6 +135,9 @@ const codex = new CodexClient({
   thinking: config.thinking,
   timeoutMs: config.codexTimeoutMs,
   autoApproveLowRiskComputerUse: config.autoApproveLowRiskComputerUse !== false,
+  computerUseMaxScreenshots: config.computerUseScreenshots === false
+    ? 0
+    : (config.computerUseMaxScreenshots ?? 3),
 });
 const sessions = new SessionStore(sessionsPath);
 const access = new AccessStore(accessPath, config.allowedUserIds ?? []);
@@ -186,6 +191,7 @@ async function handleMessage(rawMessage) {
   try {
     let reply = directReply;
     let rememberTurn = false;
+    let screenshots = [];
     if (!reply) {
       const existingThread = sessions.getThread(message.from);
       const progressEnabled = sessions.getProgressEnabled(
@@ -208,7 +214,7 @@ async function handleMessage(rawMessage) {
       for (let attempt = 1; attempt <= 3; attempt += 1) {
         try {
           const platformPolicy = process.platform === "darwin" && approvedApp
-            ? `Use the Peekaboo MCP tools for macOS desktop control in this turn. The explicitly approved app is ${approvedApp}; control only that app. Ask before sending, deleting, installing, submitting, purchasing, changing accounts, or transmitting sensitive data. Do not use AppleScript or shell input automation.\n\n`
+            ? `Use the Peekaboo MCP tools for macOS desktop control in this turn. The explicitly approved app is ${approvedApp}; control and capture only that app window, never the full desktop. Ask before sending, deleting, installing, submitting, purchasing, changing accounts, or transmitting sensitive data. Do not use AppleScript or shell input automation.\n\n`
             : "";
           const prompt = platformPolicy + memory.buildPrompt(message.from, message.text);
           result = await codexReady.then(() => codex.run(prompt, existingThread));
@@ -223,6 +229,7 @@ async function handleMessage(rawMessage) {
       if (!result) throw lastError;
       if (result.threadId) sessions.setThread(message.from, result.threadId);
       reply = result.text;
+      screenshots = result.screenshots ?? [];
       rememberTurn = true;
     }
     await wechat.sendText({
@@ -231,6 +238,15 @@ async function handleMessage(rawMessage) {
       contextToken: message.contextToken,
       clientId: `codex-reply-${message.id}`,
     });
+    for (const [index, source] of screenshots.entries()) {
+      await wechat.sendImage({
+        to: message.from,
+        source,
+        contextToken: message.contextToken,
+        clientId: `codex-shot-${message.id}-${index}`,
+      });
+      log(`screenshot sent id=${message.id} index=${index}`);
+    }
     if (rememberTurn) memory.remember(message.from, message.text, reply);
     sessions.markProcessed(message.id);
     log(`reply sent id=${message.id}`);
