@@ -9,10 +9,12 @@ Connect WeChat ClawBot directly to local Codex on Windows or macOS. Tencent's Op
 - Direct WeChat-to-local-Codex messaging
 - Pairing code and persistent user allowlist
 - Durable memory and daily notes
-- Exactly-once acknowledgements and replies
+- Deduplicated acknowledgements and replies with deterministic message IDs
 - Login auto-start, reconnect, crash recovery, and a single-instance lock
+- A native wake lock keeps the system from idling to sleep while the bridge runs
 - Scoped desktop control: official Computer Use on Windows and Peekaboo MCP on macOS
-- Encrypted Computer Use screenshot delivery to the active WeChat conversation
+- Reliable web automation through a bundled local Microsoft Playwright MCP fallback
+- Encrypted desktop and browser screenshot delivery to the active WeChat conversation
 
 ## Install
 
@@ -34,6 +36,7 @@ npm run status
 npm run uninstall
 npm test
 npm run check
+npm run smoke:browser
 ```
 
 Uninstall preserves credentials, memory, and configuration.
@@ -42,14 +45,18 @@ Uninstall preserves credentials, memory, and configuration.
 
 - Windows and macOS both support chat, file and terminal work, memory, auto-start, recovery, and scoped desktop control.
 - Windows uses the official Codex Computer Use plugin. macOS exposes the open-source [Peekaboo](https://github.com/openclaw/Peekaboo) MCP server only for turns that explicitly name an allowlisted app.
-- Peekaboo is a third-party backend, not OpenAI's official Computer Use. First use downloads it through `npx` and requires user-granted Accessibility and Screen Recording permissions.
+- Google, YouTube, URLs, and search tasks use the bundled [Microsoft Playwright MCP](https://github.com/microsoft/playwright-mcp) in a managed Chrome profile.
+- Peekaboo is a third-party optional dependency, not OpenAI's official Computer Use. It is installed during `npm install` and requires user-granted Accessibility and Screen Recording permissions.
 
 ## Limitations
 
 - Phone and Codex desktop conversations are separate and cannot yet be listed or switched from WeChat.
-- Screen lock and display-off are supported. Sleep, hibernation, shutdown, or network loss pauses replies until resume.
+- The managed Playwright profile does not automatically share sign-in state with the user's everyday Chrome profile.
+- With `preventSystemSleep: true` (the default), the display may turn off and the computer may lock while the bridge prevents idle system sleep. Set it to `false` to preserve normal idle sleep, especially on battery.
+- Manual sleep, closing a laptop lid, hibernation, shutdown, or network loss still pauses replies until resume.
+- Chat continues while the screen is locked, but desktop Computer Use requires an unlocked interactive desktop.
 - Initial QR login uses Tencent's official OpenClaw WeChat tool, though runtime conversations do not use an OpenClaw agent.
-- Up to three Computer Use screenshots are returned per turn by default. Set `computerUseScreenshots` to `false` or adjust `computerUseMaxScreenshots` locally.
+- Up to three desktop/browser screenshots are returned per turn by default. Set `computerUseScreenshots` to `false`, adjust `computerUseMaxScreenshots`, or disable `browserAutomationFallback` locally.
 
 ## Security and skill
 

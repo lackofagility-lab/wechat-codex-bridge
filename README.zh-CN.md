@@ -7,10 +7,12 @@
 - 微信直接调用本机 Codex
 - 配对码与用户白名单，陌生账号默认无权使用
 - 登录自启、断线重连、崩溃自愈、单实例运行
+- 服务运行时使用系统原生唤醒锁，避免电脑因空闲自动睡眠
 - 防止重复“收到”和重复最终回复
 - 保存近期对话与每日记忆
 - Windows 使用官方 Computer Use；macOS 使用 Peekaboo MCP，均只控制明确点名且允许的应用
-- Computer Use 完成后自动把应用截图加密上传并发送到当前微信会话
+- Chrome 网页任务使用本地 Playwright MCP，避开 Computer Use 无法确认浏览器 URL 的常见失败
+- 桌面或网页操作完成后自动把截图加密上传并发送到当前微信会话
 
 ## 安装
 
@@ -32,6 +34,7 @@ npm run status
 npm run uninstall
 npm test
 npm run check
+npm run smoke:browser
 ```
 
 卸载后台服务不会删除凭据、记忆或配置。
@@ -47,15 +50,19 @@ npm run check
 
 - Windows 与 macOS 均支持微信聊天、文件与终端任务、记忆、自启、恢复和桌面应用控制。
 - Windows 使用 Codex 官方 Computer Use；macOS 自动接入开源 Peekaboo MCP。
+- Google、YouTube、网址和网页搜索使用项目内置的 Microsoft Playwright MCP，在独立受控 Chrome 配置中运行。
 - 两端都只有在消息明确点名 `config.json` 中登记的应用时才启用桌面控制，高风险外部操作仍需确认。
-- Peekaboo 是第三方后端，并非 OpenAI 官方 Computer Use。首次使用由 `npx` 获取，用户必须亲自在系统设置中批准“辅助功能”和“屏幕录制”。
+- Peekaboo 是随 `npm install` 安装的第三方可选后端，并非 OpenAI 官方 Computer Use。用户必须亲自在系统设置中批准“辅助功能”和“屏幕录制”。
 
 ## 局限
 
 - 微信端与 Codex 桌面端会话彼此独立，暂时不能查看或切换桌面聊天。
-- 锁屏和关闭显示器时桥接仍可回复；真正睡眠、休眠、关机或断网时会暂停，恢复后自动继续。
+- Playwright 使用独立浏览器配置，不会自动继承日常 Chrome 的登录状态。
+- 默认 `preventSystemSleep: true`：屏幕仍可熄灭和锁定，但桥接会阻止“空闲自动睡眠”。如希望电脑按原电源计划睡眠（尤其是使用电池时），可改为 `false`。
+- 手动睡眠、合盖、休眠、关机或断网仍会暂停，恢复后自动继续。
+- 锁屏时普通聊天仍可回复，但桌面 Computer Use 必须等电脑解锁后才能操作应用。
 - 首次扫码借助腾讯官方 OpenClaw 微信工具取得凭据，但运行时不经过 OpenClaw Agent。
-- 每轮默认最多回传 3 张截图；可用 `computerUseScreenshots` 关闭，或用 `computerUseMaxScreenshots` 调整数量。
+- 每轮默认最多回传 3 张截图；可用 `computerUseScreenshots` 关闭、用 `computerUseMaxScreenshots` 调整数量，或用 `browserAutomationFallback` 关闭网页任务分流。
 
 ## 安全
 

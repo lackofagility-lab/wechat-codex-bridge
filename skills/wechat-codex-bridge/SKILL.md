@@ -15,10 +15,11 @@ Detect the operating system before setup. On Windows, route UI requests through 
    Require Codex desktop and Computer Use for Windows desktop control. On macOS, disclose that desktop control uses third-party open-source Peekaboo and requires user-approved Accessibility and Screen Recording permissions.
 2. Clone the project repository into a user-selected folder.
 3. Run `npm install`, then `npm run setup`. The Node installer selects a no-admin Windows user startup entry or macOS launchd; do not require PowerShell.
-4. Let Tencent's official installer display the QR code when credentials are absent.
+4. Explain that `preventSystemSleep: true` uses a process-scoped native wake lock. It permits display-off and lock, but manual sleep, lid close, hibernation, shutdown, and network loss still pause the bridge. Users who prefer normal idle sleep can set it to `false`.
+5. Let Tencent's official installer display the QR code when credentials are absent.
    On macOS, never bypass TCC. Tell the user to approve the terminal/Codex host under System Settings > Privacy & Security > Accessibility and Screen Recording when first prompted.
-5. Tell the user to send the printed `/pair NNNNNN` command to the bot.
-6. Run `npm run status`, `npm test`, and `npm run check`; verify exactly one bridge process.
+6. Tell the user to send the printed `/pair NNNNNN` command to the bot.
+7. Run `npm run status`, `npm test`, and `npm run check`; verify exactly one bridge process.
 
 Do not request, print, or copy the WeChat bearer token. It belongs only in the platform state directory reported by `npm run status`.
 
@@ -49,11 +50,13 @@ Run `npm run status`. Then inspect only the relevant tail of the reported `bridg
 
 Read `references/computer-use.md` before changing app approval, aliases, sandbox access, or desktop-control behavior.
 
-Desktop approval is exact and per app. Windows resolves `computerUseAppAliases` and injects temporary `x-oai-cua-approved-app` metadata. macOS resolves `macComputerUseAppAliases` and exposes Peekaboo only to the bridge-owned app-server and only for that scoped turn. Do not modify global Codex config or plugin caches.
+Desktop approval is scoped per app. Windows resolves `computerUseAppAliases`, keeps app-server warm across scope changes, and answers the current app-server elicitation request; high-risk acceptance must match the explicitly resolved app scope. macOS resolves `macComputerUseAppAliases` and exposes Peekaboo only to the bridge-owned app-server for that scope, restarting that private app-server when the mounted app changes. Do not modify global Codex config or plugin caches.
 
 Read approval metadata from the current app-server request `_meta` field as well as legacy nested request metadata. Keep `autoApproveHighRiskComputerUseApps` false unless the local operator explicitly requests it. Even after opt-in, never claim that built-in Computer Use product-policy blocks can be bypassed.
 
 When `computerUseScreenshots` is enabled, every actual Computer Use turn must end with a fresh screenshot of the approved app. If the main turn emits none, issue one read-only capture follow-up in the same thread. Return only screenshots from that approved app-control turn. The bridge encrypts and uploads at most `computerUseMaxScreenshots` images with deterministic message IDs. Never capture the full macOS desktop when an app window can be scoped. Explain that screenshots leave the computer and enter the paired WeChat conversation.
+
+For Google, YouTube, URL navigation, web search, and ordinary page tasks on either operating system, prefer the bundled local Microsoft Playwright MCP when `browserAutomationFallback` is enabled. Windows Computer Use may stop when it cannot verify Chrome's URL. Playwright must finish with `browser_take_screenshot`; disclose that its managed profile does not automatically share the user's everyday Chrome login.
 
 Use GPT-5.4 with the HTTP-only provider on installations where the latest default model is incompatible with the internal Responses Lite route. Prefer the standard Codex provider and managed login for new public installations.
 

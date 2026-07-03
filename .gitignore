@@ -2,6 +2,8 @@ node_modules/
 AGENTS.md
 config.json
 .node-service-enabled
+.legacy-task-disabled
+.wechat-codex-screenshots/
 memory/
 MEMORY.md
 USER.md

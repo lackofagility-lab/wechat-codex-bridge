@@ -8,6 +8,10 @@ import { MemoryStore } from "./memory-store.js";
 import { SessionStore, readJson, writeJsonAtomic } from "./store.js";
 import { WechatClient } from "./wechat-client.js";
 import { getStateDir } from "./platform.js";
+import { isRetryableCodexError, userFacingCodexError } from "./error-policy.js";
+import { commandReply } from "./commands.js";
+import { isBrowserAutomationScope, isComputerUseRetry, isWebAutomationRequest, playwrightScope } from "./task-routing.js";
+import { acquireWakeLock } from "./wake-lock.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const stateDir = getStateDir();
@@ -18,6 +22,7 @@ const syncPath = path.join(stateDir, "sync.json");
 const memoryPath = path.join(stateDir, "memory.json");
 const accessPath = path.join(stateDir, "access.json");
 const logPath = path.join(stateDir, "bridge.log");
+const maxLogBytes = 5 * 1024 * 1024;
 const instanceLockPort = 47653;
 const defaultMacComputerUseAppAliases = {
   "safari": "Safari", "notes": "Notes", "备忘录": "Notes",
@@ -31,6 +36,14 @@ const defaultMacComputerUseAppAliases = {
 
 function log(message, error = null) {
   fs.mkdirSync(stateDir, { recursive: true });
+  try {
+    if (fs.statSync(logPath).size >= maxLogBytes) {
+      fs.rmSync(`${logPath}.1`, { force: true });
+      fs.renameSync(logPath, `${logPath}.1`);
+    }
+  } catch (rotateError) {
+    if (rotateError?.code !== "ENOENT") console.error(`log rotation failed: ${rotateError.message}`);
+  }
   const cause = error?.cause ? `\nCaused by: ${error.cause.stack ?? error.cause}` : "";
   const suffix = error ? ` ${error.stack ?? error}${cause}` : "";
   fs.appendFileSync(logPath, `${new Date().toISOString()} ${message}${suffix}\n`, "utf8");
@@ -54,6 +67,8 @@ function loadConfig() {
     autoApproveHighRiskComputerUseApps: false,
     computerUseScreenshots: true,
     computerUseMaxScreenshots: 3,
+    browserAutomationFallback: true,
+    preventSystemSleep: true,
     computerUseAppAliases: {
       "记事本": "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App",
       "notepad": "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App",
@@ -81,30 +96,6 @@ async function acquireInstanceLock() {
     server.listen(instanceLockPort, "127.0.0.1", resolve);
   });
   return server;
-}
-
-function commandReply(text, userId, sessions) {
-  const command = text.trim().toLowerCase();
-  if (command === "/new" || command === "/reset") {
-    sessions.resetThread(userId);
-    return "已创建新的 Codex 会话。";
-  }
-  if (command === "/status") {
-    const thread = sessions.getThread(userId);
-    return thread ? `Codex 已连接。会话：${thread}` : "Codex 已连接，下一条消息将创建新会话。";
-  }
-  if (command === "/progress on") {
-    sessions.setProgressEnabled(userId, true);
-    return "Progress updates enabled. Hidden reasoning is never transmitted.";
-  }
-  if (command === "/progress off") {
-    sessions.setProgressEnabled(userId, false);
-    return "Progress updates disabled.";
-  }
-  if (command === "/help") {
-    return "命令：/new 新会话；/status 查看状态；/help 查看帮助。";
-  }
-  return null;
 }
 
 let instanceLock;
@@ -138,6 +129,7 @@ const codex = new CodexClient({
   computerUseMaxScreenshots: config.computerUseScreenshots === false
     ? 0
     : (config.computerUseMaxScreenshots ?? 3),
+  browserAutomationFallback: config.browserAutomationFallback !== false,
 });
 const sessions = new SessionStore(sessionsPath);
 const access = new AccessStore(accessPath, config.allowedUserIds ?? []);
@@ -149,6 +141,7 @@ const memory = new MemoryStore({
 });
 let syncBuffer = readJson(syncPath, { get_updates_buf: "" }).get_updates_buf ?? "";
 let stopping = false;
+let releaseWakeLock = () => {};
 
 function approvedComputerUseApp(text) {
   if (config.computerUseEnabled === false) return null;
@@ -160,10 +153,6 @@ function approvedComputerUseApp(text) {
     if (normalized.includes(alias.toLowerCase())) return appId;
   }
   return null;
-}
-
-function isComputerUseRetry(text) {
-  return /^(?:再试(?:一次)?|重试|继续|retry|try again|continue)[。！!\s]*$/i.test(text.trim());
 }
 
 async function handleMessage(rawMessage) {
@@ -218,37 +207,50 @@ async function handleMessage(rawMessage) {
         isComputerUseRetry(message.text) ? sessions.getApprovedComputerUseApp(message.from) : null
       );
       if (requestedApp) sessions.setApprovedComputerUseApp(message.from, requestedApp);
-      log(`computer use scope id=${message.id} requested=${requestedApp ?? "none"} active=${approvedApp ?? "none"}`);
-      codex.setApprovedComputerUseApp(approvedApp);
-      for (let attempt = 1; attempt <= 3; attempt += 1) {
+      const useBrowserBackend = config.browserAutomationFallback !== false && (
+        isWebAutomationRequest(message.text) ||
+        (isComputerUseRetry(message.text) && isBrowserAutomationScope(approvedApp))
+      );
+      if (useBrowserBackend) sessions.setApprovedComputerUseApp(message.from, requestedApp || approvedApp || playwrightScope);
+      log(`desktop scope id=${message.id} requested=${requestedApp ?? "none"} active=${approvedApp ?? "none"} backend=${useBrowserBackend ? "playwright" : approvedApp ? "computer-use" : "none"}`);
+      codex.setApprovedComputerUseApp(useBrowserBackend ? null : approvedApp);
+      const maxAttempts = approvedApp || useBrowserBackend ? 1 : 3;
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
         try {
-          const platformPolicy = approvedApp
+          const platformPolicy = useBrowserBackend
+            ? `This is a web-navigation task. Use the playwright MCP tools instead of desktop Computer Use because desktop browser control cannot reliably verify page URLs. Complete the user's request in the managed Chrome profile and finish with browser_take_screenshot so the image can be sent to WeChat. Do not use shell commands.\n\n`
+            : approvedApp
             ? process.platform === "darwin"
               ? `Use the Peekaboo MCP tools for macOS desktop control in this turn. The explicitly approved app is ${approvedApp}; control and capture only that app window, never the full desktop. This Computer Use turn MUST finish by taking a fresh screenshot of the approved app so it can be sent to WeChat. Ask before sending, deleting, installing, submitting, purchasing, changing accounts, or transmitting sensitive data. Do not use AppleScript or shell input automation.\n\n`
               : `Use the installed Computer Use skill for the explicitly approved Windows app ${approvedApp}. This Computer Use turn MUST finish by taking a fresh screenshot of that app so it can be sent to WeChat. Follow the Computer Use confirmation policy and do not substitute PowerShell or SendKeys.\n\n`
             : "";
-          const prompt = platformPolicy + memory.buildPrompt(message.from, message.text);
-          result = await codexReady.then(() => codex.run(prompt, existingThread));
+          const prompt = memory.buildPrompt(message.from, message.text) + "\n\n" + platformPolicy;
+          result = await codex.run(prompt, existingThread, { captureScreenshots: Boolean(approvedApp || useBrowserBackend) });
           break;
         } catch (error) {
           lastError = error;
-          log(`codex attempt ${attempt}/3 failed id=${message.id}`, error);
-          codex.restart(error);
-          if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 3000));
+          log(`codex attempt ${attempt}/${maxAttempts} failed id=${message.id}`, error);
+          if (!isRetryableCodexError(error)) break;
+          if (attempt < maxAttempts) await new Promise((resolve) => setTimeout(resolve, attempt * 3000));
         }
       }
       if (!result) throw lastError;
-      if (approvedApp && config.computerUseScreenshots !== false && !(result.screenshots?.length)) {
-        log(`computer use produced no screenshot; requesting final capture id=${message.id}`);
-        const capturePrompt = process.platform === "darwin"
+      if ((approvedApp || useBrowserBackend) && config.computerUseScreenshots !== false && !(result.screenshots?.length)) {
+        log(`automation produced no screenshot; requesting final capture id=${message.id}`);
+        const capturePrompt = useBrowserBackend
+          ? "Use playwright browser_take_screenshot to capture the current managed browser page. Do not change the page."
+          : process.platform === "darwin"
           ? `Use Peekaboo to take one fresh, read-only screenshot of only the approved ${approvedApp} app window. Do not change the UI or capture the full desktop.`
           : `Use the installed Computer Use skill to take one fresh, read-only screenshot of the approved ${approvedApp} app. Do not change the UI. You must actually call the screenshot/snapshot tool.`;
-        const capture = await codex.run(capturePrompt, result.threadId || existingThread);
-        if (capture.threadId) result.threadId = capture.threadId;
-        result.screenshots = capture.screenshots ?? [];
-        if (!result.screenshots.length) {
-          result.text += "\n\n（Computer Use 已执行，但截图通道没有返回图像。）";
+        try {
+          const capture = await codex.run(capturePrompt, result.threadId || existingThread, { captureScreenshots: true });
+          if (capture.threadId) result.threadId = capture.threadId;
+          result.screenshots = capture.screenshots ?? [];
+        } catch (error) {
+          log(`final screenshot capture failed id=${message.id}`, error);
+          result.screenshots = [];
         }
+        if (!result.screenshots.length) result.text += "\n\n（任务已完成，但截图通道没有返回图像。）";
       }
       if (result.threadId) sessions.setThread(message.from, result.threadId);
       reply = result.text;
@@ -261,45 +263,72 @@ async function handleMessage(rawMessage) {
       contextToken: message.contextToken,
       clientId: `codex-reply-${message.id}`,
     });
+    let screenshotFailures = 0;
     for (const [index, source] of screenshots.entries()) {
-      await wechat.sendImage({
-        to: message.from,
-        source,
-        contextToken: message.contextToken,
-        clientId: `codex-shot-${message.id}-${index}`,
-      });
-      log(`screenshot sent id=${message.id} index=${index}`);
+      try {
+        await wechat.sendImage({
+          to: message.from,
+          source,
+          contextToken: message.contextToken,
+          clientId: `codex-shot-${message.id}-${index}`,
+        });
+        log(`screenshot sent id=${message.id} index=${index}`);
+      } catch (error) {
+        screenshotFailures += 1;
+        log(`screenshot failed id=${message.id} index=${index}`, error);
+      }
     }
-    if (rememberTurn) memory.remember(message.from, message.text, reply);
+    if (screenshotFailures) {
+      await wechat.sendText({
+        to: message.from,
+        text: screenshotFailures === screenshots.length
+          ? "任务已完成，但截图发送失败。"
+          : `任务已完成，但有 ${screenshotFailures} 张截图发送失败。`,
+        contextToken: message.contextToken,
+        clientId: `codex-shot-error-${message.id}`,
+      }).catch((sendError) => log("failed to send screenshot error", sendError));
+    }
     sessions.markProcessed(message.id);
+    if (rememberTurn) {
+      try { memory.remember(message.from, message.text, reply); }
+      catch (error) { log(`memory update failed id=${message.id}`, error); }
+    }
     log(`reply sent id=${message.id}`);
     return true;
   } catch (error) {
     log(`message failed id=${message.id}`, error);
-    await wechat.sendText({
-      to: message.from,
-      text: `Codex 处理失败：${error.message}`.slice(0, 1000),
-      contextToken: message.contextToken,
-      clientId: `codex-error-${message.id}`,
-    }).catch((sendError) => log("failed to send error reply", sendError));
-    throw error;
+    try {
+      await wechat.sendText({
+        to: message.from,
+        text: userFacingCodexError(error),
+        contextToken: message.contextToken,
+        clientId: `codex-error-${message.id}`,
+      });
+      sessions.markProcessed(message.id);
+      return true;
+    } catch (sendError) {
+      log("failed to send error reply", sendError);
+      throw error;
+    }
   }
 }
 
 const codexReady = (async () => {
   await codex.start();
-  const warmupKey = "__bridge_warmup__";
-  const result = await codex.run(
-    "This is a connection warm-up. Reply with exactly READY.",
-    sessions.getThread(warmupKey),
-  );
-  if (result.threadId) sessions.setThread(warmupKey, result.threadId);
-  log("codex warm-up completed");
+  log("codex connection ready");
 })().catch((error) => {
-  log("codex warm-up failed; first user turn will retry", error);
+  log("codex connection initialization failed; first user turn will retry", error);
 });
 
 async function main() {
+  if (config.preventSystemSleep !== false) {
+    try {
+      releaseWakeLock = await acquireWakeLock();
+      log("idle system sleep prevention enabled");
+    } catch (error) {
+      log("could not prevent idle system sleep; continuing without wake lock", error);
+    }
+  }
   await wechat.notifyStart().catch((error) => log("notifyStart failed", error));
   log(`bridge started workspace=${config.workspace}`);
   let consecutivePollFailures = 0;
@@ -330,6 +359,8 @@ async function stop(signal) {
   stopping = true;
   log(`stopping (${signal})`);
   await wechat.notifyStop().catch(() => {});
+  releaseWakeLock();
+  codex.stop();
   process.exit(0);
 }
 
@@ -337,10 +368,14 @@ process.on("SIGINT", () => stop("SIGINT"));
 process.on("SIGTERM", () => stop("SIGTERM"));
 process.on("uncaughtException", (error) => {
   log("uncaught exception; exiting for service restart", error);
+  releaseWakeLock();
+  codex.stop();
   process.exit(1);
 });
 process.on("unhandledRejection", (error) => {
   log("unhandled rejection; exiting for service restart", error);
+  releaseWakeLock();
+  codex.stop();
   process.exit(1);
 });
 

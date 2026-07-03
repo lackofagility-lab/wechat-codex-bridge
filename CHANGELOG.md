@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.4.0 - 2026-07-03
+
+- Stopped restarting Windows app-server when Computer Use app scope changes.
+- Removed the blocking model warm-up turn while retaining app-server initialization.
+- Added bundled Microsoft Playwright MCP routing for Google, YouTube, URLs, and web search.
+- Added protocol-level browser navigation and screenshot smoke testing.
+- Recognized screenshot paths embedded in MCP Markdown output.
+- Classified quota/login failures as non-retryable and prevented failed screenshot uploads from replaying completed tasks.
+- Added real PID/config/credential health checks and Windows/macOS CI coverage.
+- Added process-scoped Windows/macOS wake locks without PowerShell or permanent power-plan changes.
+- Killed complete app-server/MCP process trees on restart and uninstall to prevent orphan control channels.
+- Routed browser tasks consistently on both operating systems and resolved relative screenshot paths.
+- Prevented automatic replay of desktop actions and collapsed screenshot failures into one message.
+- Rotated bridge and supervisor logs for long-running installations.
+
 ## 1.3.3 - 2026-07-03
 
 - Updated Computer Use elicitation parsing for the current app-server `_meta` schema.

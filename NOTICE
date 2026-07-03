@@ -6,4 +6,10 @@ https://github.com/Tencent/openclaw-weixin
 Codex and codex app-server are provided by OpenAI:
 https://github.com/openai/codex
 
+Browser automation fallback is provided by Microsoft's Apache-2.0-licensed Playwright MCP project:
+https://github.com/microsoft/playwright-mcp
+
+Windows native wake-lock calls use the MIT-licensed Koffi project:
+https://github.com/Koromix/koffi
+
 WeChat, ClawBot, OpenAI, ChatGPT, and Codex are trademarks of their respective owners.

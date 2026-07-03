@@ -1,8 +1,23 @@
 {
   "name": "wechat-codex-bridge",
-  "version": "1.3.3",
+  "version": "1.4.0",
   "description": "Secure cross-platform bridge between WeChat ClawBot and local Codex",
   "private": true,
+  "files": [
+    "bin/",
+    "src/",
+    "scripts/daemon.js",
+    "scripts/import-openclaw-credentials.js",
+    "scripts/smoke-playwright.js",
+    "skills/",
+    "config.example.json",
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "README.zh-CN.md",
+    "SECURITY.md"
+  ],
   "bin": {
     "wechat-codex": "bin/wechat-codex.js"
   },
@@ -28,14 +43,20 @@
     "start": "node src/service.js",
     "setup": "node bin/wechat-codex.js setup",
     "status": "node bin/wechat-codex.js status",
+    "smoke:browser": "node scripts/smoke-playwright.js",
     "uninstall": "node bin/wechat-codex.js uninstall",
-    "check": "node --check bin/wechat-codex.js && node --check scripts/daemon.js && node --check src/platform.js && node --check src/service.js && node --check src/wechat-client.js && node --check src/codex-client.js && node --check src/store.js && node --check src/memory-store.js && node --check src/access-store.js",
+    "check": "node --check bin/wechat-codex.js && node --check scripts/daemon.js && node --check scripts/smoke-playwright.js && node --check src/platform.js && node --check src/process-tree.js && node --check src/task-routing.js && node --check src/wake-lock.js && node --check src/commands.js && node --check src/error-policy.js && node --check src/service.js && node --check src/wechat-client.js && node --check src/codex-client.js && node --check src/store.js && node --check src/memory-store.js && node --check src/access-store.js",
     "test": "node --test"
   },
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
-    "@openai/codex": "^0.142.5"
+    "@openai/codex": "^0.142.5",
+    "@playwright/mcp": "^0.0.77",
+    "koffi": "^3.1.0"
+  },
+  "optionalDependencies": {
+    "@steipete/peekaboo": "^3.5.2"
   }
 }

@@ -2,24 +2,26 @@
 
 ## Repository
 
-- Suggested name: `wechat-codex-bridge`
-- Description: `Secure Windows bridge for using local Codex and scoped Computer Use from WeChat ClawBot.`
-- Topics: `wechat`, `codex`, `clawbot`, `windows`, `computer-use`, `ai-agent`, `nodejs`
+- Name: `wechat-codex-bridge`
+- Description: `Cross-platform bridge for using local Codex, desktop control, browser automation, and screenshots from WeChat ClawBot.`
+- Topics: `wechat`, `codex`, `clawbot`, `windows`, `macos`, `computer-use`, `playwright`, `ai-agent`, `nodejs`
 - License: MIT
 
-## v1.0.0 title
+## Current release highlights
 
-`WeChat Codex Bridge v1.0.0 — Windows, memory, and scoped Computer Use`
-
-## Release notes
-
-This first public release connects WeChat ClawBot directly to a local Codex app-server on Windows. It includes pairing and allowlisting, automatic startup and crash recovery, message deduplication, persistent memory, and optional per-application Computer Use. The secure default limits Codex to the configured workspace; whole-computer access is an explicit local opt-in.
-
-Known limitations: Windows only, text-only replies, desktop and phone threads are separate, Computer Use requires an unlocked session and configured app aliases, and initial QR login uses Tencent's official OpenClaw WeChat installer.
+- One Node installer for Windows and macOS; no PowerShell requirement
+- Direct WeChat-to-local-Codex conversations
+- Native background startup and crash recovery
+- Native process-scoped wake locks for display-off/locked always-on use
+- Durable memory, pairing, allowlisting, and deterministic message IDs
+- Windows Computer Use, macOS Peekaboo, and Playwright web-task routing
+- Encrypted screenshot delivery to WeChat
+- Full process-tree cleanup and no automatic replay of desktop actions
+- Clear quota/login errors without duplicate retry loops
 
 ## Before publishing
 
-- Confirm README and package metadata point to `lackofagility-lab/wechat-codex-bridge`.
-- Run tests, Skill validation, staged secret scanning, and `git diff --cached --check`.
-- Confirm `config.json`, memory, personal markdown files, logs, and credentials are ignored.
-- Create the public repository, push `main`, and publish the release from commit `HEAD`.
+- Run `npm ci`, `npm run check`, `npm test`, `npm run smoke:browser`, and Skill validation.
+- Confirm one daemon and one service process on Windows.
+- Confirm config, state, memory, logs, credentials, and unrelated local files are excluded.
+- Confirm CI covers Windows and macOS.

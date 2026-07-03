@@ -3,6 +3,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { getStateDir } from "../src/platform.js";
+import { terminateProcessTree } from "../src/process-tree.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const stateDir = getStateDir();
@@ -12,6 +13,12 @@ let stopping = false;
 
 fs.mkdirSync(stateDir, { recursive: true });
 fs.writeFileSync(pidPath, `${process.pid}\n`, "utf8");
+
+function removeOwnPid() {
+  try {
+    if (Number.parseInt(fs.readFileSync(pidPath, "utf8"), 10) === process.pid) fs.unlinkSync(pidPath);
+  } catch {}
+}
 
 function launch() {
   const service = path.join(projectRoot, "src", "service.js");
@@ -32,12 +39,12 @@ function launch() {
 function stop(signal) {
   if (stopping) return;
   stopping = true;
-  if (child && !child.killed) child.kill(signal);
-  try { fs.unlinkSync(pidPath); } catch {}
+  terminateProcessTree(child, signal);
+  removeOwnPid();
   setTimeout(() => process.exit(0), 1500).unref();
 }
 
 process.on("SIGINT", () => stop("SIGINT"));
 process.on("SIGTERM", () => stop("SIGTERM"));
-process.on("exit", () => { try { fs.unlinkSync(pidPath); } catch {} });
+process.on("exit", removeOwnPid);
 launch();

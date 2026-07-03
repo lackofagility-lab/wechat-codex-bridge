@@ -1,10 +1,14 @@
 import { spawn } from "node:child_process";
+import fs from "node:fs";
+import { createRequire } from "node:module";
+import path from "node:path";
 import readline from "node:readline";
-import { fileURLToPath } from "node:url";
+import { terminateProcessTree } from "./process-tree.js";
 
-const codexScript = fileURLToPath(
-  new URL("../node_modules/@openai/codex/bin/codex.js", import.meta.url),
-);
+const packageRequire = createRequire(import.meta.url);
+const bridgeVersion = packageRequire("../package.json").version;
+const codexScript = packageRequire.resolve("@openai/codex/bin/codex.js");
+const playwrightMcpScript = path.join(path.dirname(packageRequire.resolve("@playwright/mcp")), "cli.js");
 
 const approvalPolicy = {
   granular: {
@@ -16,11 +20,32 @@ const approvalPolicy = {
   },
 };
 
-export function macComputerUseMcpArgs(platform, approvedApp) {
+function approvalAppMatches(scope, requestedApp) {
+  if (!scope || !requestedApp) return Boolean(scope);
+  const left = String(scope).toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const right = String(requestedApp).toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return Boolean(left && right) && (left === right || left.includes(right) || right.includes(left));
+}
+
+export function macComputerUseMcpArgs(platform, approvedApp, resolvePeekaboo = () => packageRequire.resolve("@steipete/peekaboo")) {
   if (platform !== "darwin" || !approvedApp) return [];
+  const peekabooMcpScript = resolvePeekaboo();
   return [
-    "-c", 'mcp_servers.peekaboo.command="npx"',
-    "-c", 'mcp_servers.peekaboo.args=["-y","@steipete/peekaboo"]',
+    "-c", `mcp_servers.peekaboo.command=${JSON.stringify(process.execPath)}`,
+    "-c", `mcp_servers.peekaboo.args=${JSON.stringify([peekabooMcpScript])}`,
+  ];
+}
+
+export function playwrightMcpArgs(workspace, enabled = true) {
+  if (!enabled) return [];
+  const outputDir = path.join(workspace, ".wechat-codex-screenshots");
+  return [
+    "-c", `mcp_servers.playwright.command=${JSON.stringify(process.execPath)}`,
+    "-c", `mcp_servers.playwright.args=${JSON.stringify([
+      playwrightMcpScript,
+      "--browser", "chrome",
+      "--output-dir", outputDir,
+    ])}`,
   ];
 }
 
@@ -48,6 +73,12 @@ export function extractScreenshotSources(item, limit = 3) {
     }
     if (typeof value !== "object") {
       if (/image|screenshot|path|url/i.test(key)) add(value);
+      if (typeof value === "string") {
+        const markdownTargets = [...value.matchAll(/\]\(([^)\n\r]+?\.(?:png|jpe?g|webp)(?:\?[^)]*)?)\)/gi)];
+        for (const match of markdownTargets) add(match[1]);
+        const references = value.match(/(?:data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=]+|file:\/\/[^\s)'"<>]+|(?:[A-Za-z]:[\\/]|\.{0,2}[\\/]|\/)[^\n\r)'"<>]+?\.(?:png|jpe?g|webp))/gi) ?? [];
+        for (const reference of references) add(reference);
+      }
       return;
     }
     if (value.type === "image" && typeof value.data === "string") {
@@ -60,8 +91,19 @@ export function extractScreenshotSources(item, limit = 3) {
   return found;
 }
 
+export function resolveScreenshotSource(source, workspace) {
+  if (typeof source !== "string" || /^data:image\//i.test(source) || /^https?:\/\//i.test(source) || /^file:\/\//i.test(source) || path.isAbsolute(source)) {
+    return source;
+  }
+  const workspaceCandidate = path.resolve(workspace, source);
+  const outputCandidate = path.resolve(workspace, ".wechat-codex-screenshots", source);
+  if (fs.existsSync(workspaceCandidate)) return workspaceCandidate;
+  if (fs.existsSync(outputCandidate)) return outputCandidate;
+  return workspaceCandidate;
+}
+
 export class CodexClient {
-  constructor({ workspace, model, modelProvider = null, sandbox = "workspace-write", thinking = "medium", timeoutMs = 900000, autoApproveLowRiskComputerUse = true, autoApproveHighRiskComputerUseApps = false, computerUseMaxScreenshots = 3 }) {
+  constructor({ workspace, model, modelProvider = null, sandbox = "workspace-write", thinking = "medium", timeoutMs = 900000, autoApproveLowRiskComputerUse = true, autoApproveHighRiskComputerUseApps = false, computerUseMaxScreenshots = 3, platform = process.platform, browserAutomationFallback = true }) {
     this.workspace = workspace;
     this.model = model;
     this.modelProvider = modelProvider;
@@ -71,8 +113,11 @@ export class CodexClient {
     this.autoApproveLowRiskComputerUse = autoApproveLowRiskComputerUse;
     this.autoApproveHighRiskComputerUseApps = autoApproveHighRiskComputerUseApps;
     this.computerUseMaxScreenshots = Math.max(0, Math.min(10, Number(computerUseMaxScreenshots) || 0));
+    this.platform = platform;
+    this.browserAutomationFallback = browserAutomationFallback;
     this.approvedComputerUseApp = null;
     this.child = null;
+    this.initialized = false;
     this.nextId = 1;
     this.requests = new Map();
     this.turns = new Map();
@@ -82,17 +127,21 @@ export class CodexClient {
   }
 
   async start() {
-    if (this.child && !this.child.killed) return;
+    if (this.child && !this.child.killed && this.initialized) return;
     if (this.startPromise) return this.startPromise;
     this.startPromise = this.startInternal();
     try {
       await this.startPromise;
+    } catch (error) {
+      this.restart(error);
+      throw error;
     } finally {
       this.startPromise = null;
     }
   }
 
   async startInternal() {
+    this.initialized = false;
     const args = [codexScript, "app-server", "--listen", "stdio://"];
     if (this.modelProvider === "chatgpt-http") {
       args.push(
@@ -104,27 +153,12 @@ export class CodexClient {
         "-c", "model_providers.chatgpt-http.supports_websockets=false",
       );
     }
-    if (this.approvedComputerUseApp) {
-      const requestMeta = JSON.stringify({
-        "x-oai-cua-approved-app": this.approvedComputerUseApp,
-      });
-      args.push(
-        "-c",
-        `mcp_servers.node_repl.env.NODE_REPL_REQUEST_META=${JSON.stringify(requestMeta)}`,
-      );
-    }
-    args.push(...macComputerUseMcpArgs(process.platform, this.approvedComputerUseApp));
+    args.push(...macComputerUseMcpArgs(this.platform, this.approvedComputerUseApp));
+    args.push(...playwrightMcpArgs(this.workspace, this.browserAutomationFallback));
     this.child = spawn(process.execPath, args, {
       cwd: this.workspace,
       windowsHide: true,
-      env: {
-        ...process.env,
-        ...(this.approvedComputerUseApp ? {
-          NODE_REPL_REQUEST_META: JSON.stringify({
-            "x-oai-cua-approved-app": this.approvedComputerUseApp,
-          }),
-        } : {}),
-      },
+      env: process.env,
       stdio: ["pipe", "pipe", "pipe"],
     });
     this.child.stderr.on("data", (chunk) => process.stderr.write(`[codex] ${chunk}`));
@@ -133,7 +167,7 @@ export class CodexClient {
     readline.createInterface({ input: this.child.stdout }).on("line", (line) => this.onLine(line));
 
     await this.request("initialize", {
-      clientInfo: { name: "wechat-codex-bridge", title: "WeChat Codex Bridge", version: "1.0.0" },
+      clientInfo: { name: "wechat-codex-bridge", title: "WeChat Codex Bridge", version: bridgeVersion },
       capabilities: {
         experimentalApi: true,
         mcpServerOpenaiFormElicitation: true,
@@ -141,6 +175,7 @@ export class CodexClient {
     });
     this.notify("initialized", {});
     this.loadedThreads.clear();
+    this.initialized = true;
   }
 
   onLine(line) {
@@ -169,9 +204,10 @@ export class CodexClient {
       if (item?.type === "agentMessage" && this.turns.has(turnId)) {
         this.turns.get(turnId).messages.push(item.text);
       }
-      if (turnId && this.approvedComputerUseApp && item?.type !== "agentMessage") {
+      if (turnId && this.turns.get(turnId)?.captureScreenshots && item?.type !== "agentMessage") {
         const existing = this.turnScreenshots.get(turnId) ?? [];
-        const next = extractScreenshotSources(item, this.computerUseMaxScreenshots);
+        const next = extractScreenshotSources(item, this.computerUseMaxScreenshots)
+          .map((source) => resolveScreenshotSource(source, this.workspace));
         if (next.length) {
           const merged = [...new Set([...existing, ...next])];
           this.turnScreenshots.set(turnId, merged.slice(-this.computerUseMaxScreenshots));
@@ -213,7 +249,10 @@ export class CodexClient {
     const canAccept =
       isComputerUseApproval &&
       this.autoApproveLowRiskComputerUse &&
-      (meta.riskLevel !== "high" || this.autoApproveHighRiskComputerUseApps);
+      (meta.riskLevel !== "high" || (
+        this.autoApproveHighRiskComputerUseApps &&
+        approvalAppMatches(this.approvedComputerUseApp, meta.tool_params?.app)
+      ));
     process.stderr.write(`[computer-use approval] method=${message.method} app=${meta.tool_params?.app ?? "unknown"} risk=${meta.riskLevel ?? "unknown"} action=${canAccept ? "accept" : "decline"}\n`);
     this.send({
       id: message.id,
@@ -260,19 +299,26 @@ export class CodexClient {
     this.loadedThreads.clear();
     this.turnScreenshots.clear();
     this.child = null;
+    this.initialized = false;
   }
 
   restart(reason = new Error("Codex app-server restart requested")) {
     const child = this.child;
     this.failAll(reason);
-    if (child && !child.killed) child.kill();
+    terminateProcessTree(child, "SIGTERM", this.platform);
+  }
+
+  stop() {
+    this.restart(new Error("Codex app-server stopped"));
   }
 
   setApprovedComputerUseApp(appId) {
     const next = appId || null;
     if (next === this.approvedComputerUseApp) return;
     this.approvedComputerUseApp = next;
-    if (this.child) this.restart(new Error("Computer Use app scope changed"));
+    if (this.child && this.platform === "darwin") {
+      this.restart(new Error("macOS Computer Use backend scope changed"));
+    }
   }
 
   async ensureThread(threadId) {
@@ -309,7 +355,7 @@ export class CodexClient {
     return newThreadId;
   }
 
-  async run(prompt, threadId = null) {
+  async run(prompt, threadId = null, { captureScreenshots = false } = {}) {
     await this.start();
     const activeThreadId = await this.ensureThread(threadId);
     const result = await this.request("turn/start", {
@@ -328,7 +374,7 @@ export class CodexClient {
         reject(error);
         this.restart(error);
       }, this.timeoutMs);
-      this.turns.set(turnId, { resolve, reject, timer, messages: [] });
+      this.turns.set(turnId, { resolve, reject, timer, messages: [], captureScreenshots });
     });
     return { threadId: activeThreadId, text: completed.text, screenshots: completed.screenshots };
   }
