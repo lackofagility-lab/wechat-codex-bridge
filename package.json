@@ -1,14 +1,18 @@
 {
   "name": "wechat-codex-bridge",
-  "version": "1.0.0",
-  "description": "Secure Windows bridge between WeChat ClawBot and local Codex",
+  "version": "1.1.0",
+  "description": "Secure cross-platform bridge between WeChat ClawBot and local Codex",
   "private": true,
+  "bin": {
+    "wechat-codex": "bin/wechat-codex.js"
+  },
   "license": "MIT",
   "keywords": [
     "wechat",
     "codex",
     "clawbot",
     "windows",
+    "macos",
     "agent"
   ],
   "repository": {
@@ -22,7 +26,10 @@
   "type": "module",
   "scripts": {
     "start": "node src/service.js",
-    "check": "node --check src/service.js && node --check src/wechat-client.js && node --check src/codex-client.js && node --check src/store.js && node --check src/memory-store.js && node --check src/access-store.js",
+    "setup": "node bin/wechat-codex.js setup",
+    "status": "node bin/wechat-codex.js status",
+    "uninstall": "node bin/wechat-codex.js uninstall",
+    "check": "node --check bin/wechat-codex.js && node --check scripts/daemon.js && node --check src/platform.js && node --check src/service.js && node --check src/wechat-client.js && node --check src/codex-client.js && node --check src/store.js && node --check src/memory-store.js && node --check src/access-store.js",
     "test": "node --test"
   },
   "engines": {

@@ -2,89 +2,58 @@
 
 [简体中文](README.zh-CN.md)
 
-Run Codex from WeChat on a Windows PC without routing conversations through an OpenClaw agent.
-
-在 Windows 电脑上通过微信直接使用本机 Codex。OpenClaw/Tencent 插件只用于首次微信扫码授权，不参与后续 Agent、模型或会话处理。
+Connect WeChat ClawBot directly to local Codex on Windows or macOS. Tencent's OpenClaw tool is used only for initial QR login; runtime prompts do not pass through an OpenClaw agent.
 
 ## Features
 
-- Direct WeChat ClawBot ↔ local Codex app-server connection
-- One-time pairing code and persistent user allowlist
-- Durable recent memory and daily conversation notes
-- Optional Windows Computer Use for controlling desktop applications from WeChat
-- Exact per-app Computer Use approval; no wildcard desktop permission
-- Exactly-once message IDs to prevent duplicate acknowledgements and replies
-- Auto-start, crash recovery, long-poll reconnect, and single-instance lock
-- Screen lock and display-off supported; Windows sleep/hibernate still pauses replies
-
-## Requirements
-
-- Windows 10 or 11
-- Node.js 22 or newer
-- Codex CLI, signed in with ChatGPT or an API key
-- Codex desktop app with the Computer Use plugin for desktop control
-- WeChat with ClawBot access
+- Direct WeChat-to-local-Codex messaging
+- Pairing code and persistent user allowlist
+- Durable memory and daily notes
+- Exactly-once acknowledgements and replies
+- Login auto-start, reconnect, crash recovery, and a single-instance lock
+- Optional scoped Windows Computer Use
 
 ## Install
 
-Open PowerShell:
+Requires Windows 10/11 or macOS, Node.js 22+, Git, a signed-in Codex CLI, and WeChat ClawBot access.
 
-```powershell
+The same commands work in Windows Terminal, CMD, PowerShell, zsh, and bash. PowerShell scripts are not required.
+
+```text
 git clone https://github.com/lackofagility-lab/wechat-codex-bridge.git
 cd wechat-codex-bridge
-powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
+npm install
+npm run setup
 ```
 
-The setup script uses Tencent's official `@tencent-weixin/openclaw-weixin-cli` for the QR-code login, imports the credential into `%APPDATA%\wechat-codex-bridge`, and installs the bridge as a per-user Scheduled Task. Send the printed `/pair 123456` message to the bot once.
+Setup opens Tencent's official QR login when needed, prints a one-time `/pair 123456` command, and installs a native per-user background service: a no-admin login startup entry on Windows and launchd on macOS.
 
-## Commands
+```text
+npm run status
+npm run uninstall
+npm test
+npm run check
+```
 
-- `/new` or `/reset` — start a fresh Codex thread
-- `/status` — show connection status
-- `/progress on` or `/progress off` — toggle the single processing acknowledgement
-- `/help` — list commands
+Uninstall preserves credentials, memory, and configuration.
 
-## Configuration
+## Platform support
 
-Copy `config.example.json` to `config.json`. The setup script does this automatically and resolves `workspace` to an absolute path.
-
-Security defaults:
-
-- Unknown WeChat users are ignored.
-- Codex is restricted to `workspace-write`.
-- Read-only desktop inspection may run immediately; actions with external side effects require confirmation in WeChat.
-- Low-risk Computer Use app access is approved by the bridge for the active paired-user turn; high-risk MCP approvals are declined until explicitly confirmed.
-- `danger-full-access` is an explicit local opt-in and is never the public default.
+- Windows and macOS: WeChat chat, Codex file and terminal work, memory, auto-start, and recovery.
+- Windows: current official Computer Use plugin support.
+- macOS: the current official Computer Use runtime has no equivalent Mac implementation. This project does not disguise AppleScript as Computer Use or bypass its approval model.
 
 ## Limitations
 
-- Windows is the only supported service platform today.
-- Phone and Codex desktop conversations are separate; phone cannot list or switch desktop threads yet.
-- Computer Use requires an unlocked Windows session, Codex desktop runtime, and an alias for the named app.
-- Replies are text-only; Computer Use screenshots are not sent back to WeChat yet.
-- The first QR login uses Tencent's official OpenClaw WeChat installer, though runtime conversations do not use an OpenClaw agent.
-- Credentials, local config, personal memory, and logs are excluded from Git.
+- Phone and Codex desktop conversations are separate and cannot yet be listed or switched from WeChat.
+- Screen lock and display-off are supported. Sleep, hibernation, shutdown, or network loss pauses replies until resume.
+- Initial QR login uses Tencent's official OpenClaw WeChat tool, though runtime conversations do not use an OpenClaw agent.
+- Replies are text-first; Computer Use screenshots are not sent to WeChat yet.
 
-## Maintenance
+## Security and skill
 
-```powershell
-npm test
-npm run check
-powershell -ExecutionPolicy Bypass -File .\scripts\uninstall-service.ps1
-```
+Unknown users are denied and Codex defaults to `workspace-write`. Whole-computer access is an explicit local opt-in. Computer Use uses exact per-app approval, not a wildcard. See [SECURITY.md](SECURITY.md).
 
-## Codex Skill
+The reusable Codex skill is in `skills/wechat-codex-bridge`.
 
-The reusable skill lives in `skills/wechat-codex-bridge`. Copy it to `%USERPROFILE%\.codex\skills\wechat-codex-bridge`, then ask Codex:
-
-> Use `$wechat-codex-bridge` to install or diagnose my bridge.
-
-## Architecture and attribution
-
-The runtime talks to Tencent's documented iLink bot endpoints and OpenAI's Codex app-server JSON-RPC interface. WeChat login bootstrap is provided by Tencent's MIT-licensed [openclaw-weixin](https://github.com/Tencent/openclaw-weixin). Codex is provided by OpenAI's [Codex](https://github.com/openai/codex).
-
-This community project is not affiliated with or endorsed by Tencent or OpenAI. WeChat, ClawBot, OpenAI, and Codex are trademarks of their respective owners.
-
-## License
-
-MIT
+MIT licensed. This community project is not affiliated with or endorsed by Tencent or OpenAI.

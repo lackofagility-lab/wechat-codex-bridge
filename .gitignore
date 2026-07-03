@@ -1,6 +1,7 @@
 node_modules/
 AGENTS.md
 config.json
+.node-service-enabled
 memory/
 MEMORY.md
 USER.md

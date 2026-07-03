@@ -1,35 +1,39 @@
 # 微信 Codex Bridge
 
-把 Windows 电脑上的本地 Codex 连接到微信 ClawBot。微信消息直接交给本机 `codex app-server`，不经过 OpenClaw Agent、模型或会话系统。
+让 Windows 或 macOS 电脑上的本地 Codex 直接连接微信 ClawBot。腾讯工具只用于首次扫码取得微信凭据，不参与后续 Agent、模型或会话处理。
 
-## 能做什么
+## 功能
 
-- 在微信里向本机 Codex 提问、处理项目和运行任务
-- 配对码与用户白名单，陌生微信账号默认无权使用
-- 开机自启、断线重连、进程自愈、单实例运行
+- 微信直接调用本机 Codex
+- 配对码与用户白名单，陌生账号默认无权使用
+- 登录自启、断线重连、崩溃自愈、单实例运行
 - 防止重复“收到”和重复最终回复
-- 保存近期对话和每日记忆，重启或换线程后继续使用
-- 可选 Computer Use：控制明确点名并已配置的 Windows 应用
-- 可选 `danger-full-access`：整机文件和命令权限，默认不开启
-
-## 安装条件
-
-- Windows 10/11
-- Node.js 22+
-- Git
-- 已登录的 Codex CLI
-- 如需桌面控制：Codex 桌面版及 Computer Use 插件
-- 可使用微信 ClawBot
+- 保存近期对话与每日记忆
+- Windows 可选官方 Computer Use，控制明确点名且允许的应用
 
 ## 安装
 
-```powershell
+需要 Windows 10/11 或 macOS、Node.js 22+、Git、已登录的 Codex CLI，以及可用的微信 ClawBot。
+
+以下命令在 Windows Terminal、CMD、PowerShell、zsh 和 bash 中相同；主流程不依赖 PowerShell：
+
+```text
 git clone https://github.com/lackofagility-lab/wechat-codex-bridge.git
 cd wechat-codex-bridge
-powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
+npm install
+npm run setup
 ```
 
-首次安装会调用腾讯官方工具显示微信二维码。扫码后，终端会显示 `/pair 123456`，把这条命令发送给 ClawBot 即可完成配对。
+首次安装会打开腾讯官方二维码登录。扫码后，把终端显示的 `/pair 123456` 发给 ClawBot。Windows 会安装无需管理员权限的当前用户登录启动项，macOS 会安装 launchd 用户服务。
+
+```text
+npm run status
+npm run uninstall
+npm test
+npm run check
+```
+
+卸载后台服务不会删除凭据、记忆或配置。
 
 ## 微信命令
 
@@ -38,42 +42,21 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 - `/progress on|off`：开关单次“正在处理”提示
 - `/help`：查看命令
 
-## Computer Use
+## 平台能力
 
-应用必须在 `config.json` 的 `computerUseAppAliases` 中登记，并在当前微信消息中明确点名。项目不会使用全局通配符批准所有应用。聊天、密码、银行支付、相机、远程控制、安全设置、隐私浏览和云盘应用建议保持禁止。
-
-例如：
-
-```json
-{
-  "computerUseAppAliases": {
-    "记事本": "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App",
-    "google": "Chrome"
-  }
-}
-```
+- Windows 与 macOS：微信聊天、Codex 文件操作、终端任务、记忆、自启和恢复。
+- Windows：支持当前官方 Computer Use 插件。
+- macOS：当前官方 Computer Use 运行时没有提供等价能力，因此本项目不会用 AppleScript 冒充或绕过其审批机制。
 
 ## 局限
 
-- 当前只正式支持 Windows。
-- 电脑关机、睡眠、休眠或断网时不能回复；锁屏时无法可靠操作桌面。
-- 微信端聊天与 Codex 桌面端聊天目前相互独立，不能在微信查看或切换桌面会话。
-- 首次微信扫码仍借助腾讯官方 OpenClaw 微信插件取得凭据，但运行时不依赖 OpenClaw Agent。
-- 微信端只支持文本回复，尚未回传 Computer Use 截图。
-- 新安装的桌面应用需要补充应用别名后才能控制。
+- 微信端与 Codex 桌面端会话彼此独立，暂时不能查看或切换桌面聊天。
+- 锁屏和关闭显示器时桥接仍可回复；真正睡眠、休眠、关机或断网时会暂停，恢复后自动继续。
+- 首次扫码借助腾讯官方 OpenClaw 微信工具取得凭据，但运行时不经过 OpenClaw Agent。
+- 回复以文字为主，Computer Use 截图尚不会回传微信。
 
 ## 安全
 
-默认使用 `workspace-write`。只有明确理解风险时才把 `sandbox` 改为 `danger-full-access`。获得授权的微信账号可能指挥 Codex 修改文件或操作应用；请勿向他人泄露配对码和微信账号。
+默认使用 `workspace-write`。只有明确理解风险时才改为 `danger-full-access`。Computer Use 使用逐应用授权，不开放“所有应用”通配权限。
 
-详见 [SECURITY.md](SECURITY.md)。
-
-## Skill
-
-将 `skills/wechat-codex-bridge` 复制到 `%USERPROFILE%\.codex\skills\wechat-codex-bridge`，然后在 Codex 中说：
-
-> 使用 `$wechat-codex-bridge` 帮我安装或诊断微信桥接。
-
-## 许可证
-
-MIT。微信扫码授权基于腾讯 MIT 许可的 [openclaw-weixin](https://github.com/Tencent/openclaw-weixin)；Codex 由 [OpenAI Codex](https://github.com/openai/codex) 提供。
+详见 [SECURITY.md](SECURITY.md)。项目采用 MIT 许可证。

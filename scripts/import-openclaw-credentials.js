@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
+import { getStateDir } from "../src/platform.js";
 
 const sourceRoot = path.join(os.homedir(), ".openclaw", "openclaw-weixin");
 const accountIds = JSON.parse(fs.readFileSync(path.join(sourceRoot, "accounts.json"), "utf8"));
@@ -12,8 +13,7 @@ const syncPath = path.join(sourceRoot, "accounts", `${accountId}.sync.json`);
 const account = JSON.parse(fs.readFileSync(accountPath, "utf8"));
 if (!account.token || !account.baseUrl) throw new Error("WeChat credential is incomplete");
 
-const appData = process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming");
-const targetRoot = path.join(appData, "wechat-codex-bridge");
+const targetRoot = getStateDir();
 const existingPath = path.join(targetRoot, "credentials.json");
 let pairingCode = String(crypto.randomInt(100000, 1000000));
 if (fs.existsSync(existingPath)) {

@@ -1,5 +1,11 @@
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
+
+# v1.1+ starts the bridge directly with Node from the per-user startup entry.
+# Keep this legacy task harmless on upgraded installations that cannot remove it
+# without elevation.
+if (Test-Path (Join-Path $projectRoot '.node-service-enabled')) { exit 0 }
+
 $node = (Get-Command node).Source
 $service = Join-Path $projectRoot 'src\service.js'
 

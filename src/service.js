@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import net from "node:net";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CodexClient } from "./codex-client.js";
@@ -8,10 +7,10 @@ import { AccessStore } from "./access-store.js";
 import { MemoryStore } from "./memory-store.js";
 import { SessionStore, readJson, writeJsonAtomic } from "./store.js";
 import { WechatClient } from "./wechat-client.js";
+import { getStateDir } from "./platform.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const appData = process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming");
-const stateDir = process.env.WECHAT_CODEX_STATE_DIR || path.join(appData, "wechat-codex-bridge");
+const stateDir = getStateDir();
 const configPath = process.env.WECHAT_CODEX_CONFIG || path.join(projectRoot, "config.json");
 const credentialsPath = path.join(stateDir, "credentials.json");
 const sessionsPath = path.join(stateDir, "sessions.json");
